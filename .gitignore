@@ -1,0 +1,12 @@
+env
+*.pyc
+twistd.log
+twisted/plugins/dropin.cache
+
+# generated files in test-master
+test-master/Makefile.sample
+test-master/buildbot.tac
+test-master/changes.pck
+test-master/local.py
+test-master/master.cfg.sample
+test-master/public_html

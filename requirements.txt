@@ -1,0 +1,4 @@
+mercurial==1.5.4
+Twisted==8.2.0
+simplejson
+MySQL-python

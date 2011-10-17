@@ -1,0 +1,8 @@
+#!/usr/bin/env python
+
+import os.path
+import site
+site.addsitedir(os.path.join(os.path.dirname(__file__), '..', 'vendor-local'))
+
+from buildbot.scripts import runner
+runner.run()

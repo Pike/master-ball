@@ -1,0 +1,7 @@
+[
+  {
+    "name": "add-on",
+    "repo": "addon",
+    "server": "http://localhost:8001/"
+  }
+]

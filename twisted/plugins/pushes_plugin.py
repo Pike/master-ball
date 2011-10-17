@@ -49,11 +49,16 @@ from twisted.web.client import getPage, HTTPClientFactory
 from datetime import datetime
 import re
 import os
+import sys
 from urlparse import urljoin
 try:
     import json
 except ImportError:
     import simplejson as json
+
+import site
+site.addsitedir('vendor-local')
+
 
 class Options(usage.Options):
     optParameters = [["settings", "s", None, "Django settings module."],
