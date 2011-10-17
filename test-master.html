@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset='utf-8'>
+
+<title>test-master &mdash; Pike/master-ball @ GitHub</title>
+
+<style type="text/css">
+body {
+	margin-top: 1.0em;
+	background-color: #ffffff;
+	font-family: Helvetica, Arial, FreeSans, san-serif;
+	color: #000000;
+}
+
+#container {
+	margin: 0 auto;
+	width: 700px;
+}
+
+h1 {
+	font-size: 3.8em;
+	color: #000000;
+	margin-bottom: 3px;
+}
+
+h1 .small {
+	font-size: 0.4em;
+}
+
+h1 a {
+	text-decoration: none
+}
+
+h2 {
+	font-size: 1.5em;
+	color: #000000;
+}
+
+h3 {
+	text-align: center;
+	color: #000000;
+}
+
+a {
+	color: #000000;
+}
+
+.description {
+	font-size: 1.2em;
+	margin-bottom: 30px;
+	margin-top: 30px;
+	font-style: italic;
+}
+
+.download {
+	float: right;
+}
+
+pre {
+	background: #000;
+	color: #fff;
+	padding: 15px;
+}
+
+hr {
+	border: 0;
+	width: 80%;
+	border-bottom: 1px solid #aaa
+}
+
+.footer {
+	text-align: center;
+	padding-top: 30px;
+	font-style: italic;
+}
+</style>
+</head>
+
+<body>
+  <a href="http://github.com/Pike/master-ball"><img
+    style="position: absolute; top: 0; right: 0; border: 0;"
+    src="http://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png"
+    alt="Fork me on GitHub" /></a>
+
+  <div id="container">
+
+    <h1>test-master</h1>
+
+    <div class="description">
+      <em>test-master</em> is a local-only test setup for the elmo build
+      infrastructure.
+    </div>
+
+    <h2>Take-Aways</h2>
+    <p>This document explains a complete local setup of an elmo test
+      environment. You'll see how to:</p>
+    <ul>
+      <li>Configure <code>master-ball/test-master</code></li>
+      <li>Create staging environment</li>
+      <li>Run mercurial webserver</li>
+      <li>Set up elmo</li>
+      <li>Set up the master</li>
+      <li>Set up the slave</li>
+      <li>Run the bots</li>
+      <li>Watch the results</li>
+    </ul>
+
+    <h2 id="configure">Install and Configure test-master</h2>
+    <p>
+      For the general master setup, you want to follow the instructions
+      for l10n-master, but you'll put your local.py into the
+      <code>test-master</code>
+      directory.
+    </p>
+    <p>
+      Your
+      <code>test-master/local.py</code>
+      should look somewhat like this:
+    </p>
+    <pre>from base_settings import *
+DATABASES = {
+    'default': {} # you know this stuff
+}
+REPOSITORY_BASE = '/tmp/stage/repos/'
+buildbase = '/tmp/builds/
+</pre>
+    <p>
+      The
+      <code>REPOSITORY_BASE</code>
+      points to the
+      <code>repos</code>
+      subdirectory in your test environment, and
+      <code>buildbase</code>
+      is where buildbot will store logs and other build data. We'll use
+      the same directories when in
+      <code>settings/mounts_local.py</code>
+      when setting up elmo.
+    </p>
+
+    <h2 id="stage">Staging Environment</h2>
+    <p>
+      The staging environment is the area where you will do your
+      mercurial work. The
+      <code>repos</code>
+      subdirectory holds all your <em>upstream</em> mercurial
+      repostories. There's a
+      <code>webdir.conf</code>
+      next to it that you can use together with hg serve, and that will
+      build your mercurial server.
+    </p>
+    <p>
+      Parallel to that, there's the
+      <code>workdir</code>
+      tree, in which you will do the actual edits to the mercurial
+      server, before you commit and push them.
+    </p>
+    <p>
+      Both directory trees consist of a
+      <code>l10n</code>
+      directory to hold the localizations, and a
+      <code>mozilla</code>
+      directory for the en-US app.
+    </p>
+    <p>Sounds all really complicated, but there's help.</p>
+    <p>For the stage setup, you just want to run</p>
+    <pre>$ python scripts/create-test-env.py /tmp/stage</pre>
+    <p>This script does a few things:</p>
+    <ul>
+      <li>create a virtualenv in <code>env</code></li>
+      <li>install the requirements.txt in that env</li>
+      <li>upload our hg server infrastructure into that env</li>
+      <li>create the stage:
+        <ul>
+          <li>upstream <code>repos</code></li>
+          <li>set up <code>workdir</code></li>
+          <li>fill workdir with sample application in <code>mozilla</code>
+            and push that
+          </li>
+          <li>fill in dummy localizations in <code>l10n</code>, not
+            pushed
+          </li>
+        </ul>
+      </li>
+    </ul>
+    <h3>Running the hg server</h3>
+    <p>
+      You'll find a
+      <code>webdir.conf</code>
+      in your staging area, that's the best to use to run the webserver.
+      First, though, you'll want to activate your virtualenv, as that's
+      picking the required version of hg.
+    </p>
+    <pre>$ . env/bin/activate</pre>
+    <p>
+      Now head to your stage area, and start the mercurial server, on
+      port
+      <code>8001</code>
+      . If you want to use a different port, you can do that, but you'll
+      need to tweak the database objects in elmo below.
+    </p>
+    <pre>(env) $ hg serve --webdir-conf=webdir.conf -p 8001</pre>
+    <p>
+      You can verify that your webserver is set up right by going to <a
+        href="http://localhost:8001/">the main page</a>, and in
+      particular to <a href="http://localhost:8001/mozilla/pushloghtml">mozilla's
+        pushlog</a>.
+    </p>
+
+    <h2>Elmo Setup</h2>
+    <p>
+      You wanna do a regular <a
+        href="https://github.com/mozilla/elmo/wiki/Running-locally">local
+        elmo setup</a>. The only interesting detail is that you also want to
+      load an additional fixture. That's going to set up the
+      <code>mozilla</code>
+      repository and the
+      <code>l10n</code>
+      forrest. You'll need those for the staging area to work. The
+      fixtures assume that you'll have the hg server running on
+      <code>http://localhost:8001/</code>
+      , so if you choose differently, you'll need to tweak that.
+    </p>
+    <pre>$ ./manage.py loaddata localhost</pre>
+
+    <h2>Master setup</h2>
+    <p>As you're in a new shell now, you want to activate your
+      virtualenv again.</p>
+    <pre>$ . env/bin/activate</pre>
+    <p>
+      For the stuff that follows, you should generally have that on.
+      You'll see by the
+      <code>(env)</code>
+      prefix in the code snippets which lines are in the env for sure.
+    </p>
+    <p>
+      We're working in
+      <code>test-master</code>
+      , so let's go there, and create the master.
+    </p>
+    <pre>(env) $ cd test-master
+(env) $ ../scripts/buildbot create-master .</pre>
+    <p>
+      You only need to do that once. Next we need the
+      <code>local.py</code>
+      with the following contents, plus your common database setup:
+    </p>
+    <pre>from base_settings import *
+DATABASES = {
+    'default': {} # you know this stuff
+}
+REPOSITORY_BASE = '/tmp/stage/repos/'
+buildbase = '/tmp/builds/</pre>
+    <p>
+      That's all. Next you want to set up a buildbot slave, with
+      <code>slave-ball</code>
+      . You want to set that up with name and password from
+      <code>slaves.json</code>
+      .
+    </p>
+
+    <h2>Running the bots</h2>
+    <p>
+      The first bot you want to run is the pushlog poller, which copies
+      the pushlog databases from your
+      <code>repos</code>
+      into elmo. You probably want to do this <em>before</em> you start
+      the buildbot master, just because it's more realistic to have
+      repos first, and then builds.
+    </p>
+    <h3>get-pushes</h3>
+    <pre>(env) $ PYTHONPATH=$PWD/test-master twistd get-pushes -s settings_master -n
+(env) $ tail -f twistd.log</pre>
+    <p>
+      Now you're looking at the log file of the get-pushes daemon. It
+      should find a push on
+      <code>mozilla</code>
+      , and then cycle every few seconds.
+    </p>
+    <h3>buildbot master and slave</h3>
+    <p>Starting the master and slave is rather easy, in the master
+      env, run</p>
+    <pre>(env) $ ./scripts/buildbot start test-master
+(env) $ tail -f test-master/twistd.log</pre>
+    <p>
+      where
+      <code>test-master</code>
+      is the path to the test-master directory, not the name or
+      something else.
+    </p>
+    <p>
+      In the virtualenv of
+      <code>slave-ball</code>
+      , run
+    </p>
+    <pre>(env) $ ./scripts/buildbot start slave
+(env) $ tail -f slave/twistd.log</pre>
+    <h3>elmo</h3>
+    <p>
+      Last but not least, you want to run the elmo webserver, too. If
+      you're using a virtualenv for elmo, us that. We'll assume the
+      default port here and going forward,
+      <code>8000</code>
+      .
+    </p>
+    <pre>$ ./manage.py runserver</pre>
+
+    <h2>Watch the results</h2>
+    <p>You should have 5 shells with logs for each part of the
+      automation now:</p>
+    <ol>
+      <li>the django log for elmo</li>
+      <li>the hg output of hg serve (noisy, that's cool)</li>
+      <li>the tail of twistd.log for get-pushes (this makes hg
+        noisy)</li>
+      <li>the tail of twistd.log for test-master</li>
+      <li>the tail of twistd.log for the slave connected to
+        test-master</li>
+    </ol>
+
+    <h3>Expectations on elmo</h3>
+    <p>
+      On elmo, the <a href="http://localhost:8000/">homepage</a> should
+      show 4 active l10n repositories, and the pushes view over <a
+        href="http://localhost:8000/pushes/">all repositories</a> should
+      show one push on the
+      <code>mozilla</code>
+      repository.
+    </p>
+    <p>
+      Whenever you start the buildmaster, it will trigger a build per <em>tree</em>
+      to get more data from the
+      <code>l10n.ini</code>
+      files on hg, and as you started all bots, you should see one build
+      on the <a href="http://localhost:8000/builds/waterfall">waterfall</a>,
+      for the <em>tree-builder</em> Builder. If that box isn't green,
+      your setup is broken. From there, you get to the actual <a
+        href="http://localhost:8000/builds/builders/tree-builder/0">build
+        display</a>, showing one step
+      <code>configured fx</code>
+      . You should be able to surf to it's
+      <code>stdio</code>
+      log, and see the build properties. In particular the
+      <code>locales</code>
+      and
+      <code>tree</code>
+      build properties should match your setup.
+    </p>
+
+    <h2>Play</h2>
+    <p>
+      Next up is play. Let's be a localizer and push our changes. The
+      staging script already pre-filled all working copies with data,
+      which we can now just push. While we're doing that, watching the <a
+        href="http://localhost:8000/builds/tbpl">TBPL</a> (bad name) is
+      entertaining. (That page only refreshes every 5 minutes, tweak
+      <code>delay</code>
+      in a js shell for now.)
+    </p>
+    <p>
+      Let's go to our working directories,
+      <code>l10n/ab</code>
+      for a start, and push. Be sure to have your virtualenv activated
+      again.
+    </p>
+    <pre>(env) $ cd /tmp/stage/workdir/l10n/ab
+(env) $ hg push</pre>
+    <p>That will tell you that it's inserting that changeset to the
+      pushlog. That's the local one per repository that our mercurial
+      hooks do.</p>
+    <p>
+      Next, the
+      <code>get-pushes</code>
+      daemon will find that, and add it to the overall elmo pushes
+      database. You can verify that on the <a
+        href="http://localhost:8000/pushes/">pushes</a> page.
+    </p>
+    <p>
+      Then, the
+      <code>test-master</code>
+      will pick that up, and schedule a compare-locales build for it,
+      which then runs and does the work on the slave.
+    </p>
+    <p>As the build starts (and when it's ended), it will show up on
+      the build reporting page.</p>
+    <p>
+      Now that we have a real active tree, you'll see the
+      <code>fx</code>
+      tree show up on the <a href="http://localhost:8000/">homepage</a>,
+      linking to the <a href="http://localhost:8000/dashboard/?tree=fx">dashboard</a>
+      of the tree. Which gives us a chance to verify that the rich
+      compare-locales output works as well, if you click on the
+      <code>C</code>
+      link there.
+    </p>
+
+    <h3>Next steps</h3>
+    <p>
+      Next up, you can push the remaining localizations, and also do an
+      edit to the l10n files in
+      <code>mozilla</code>
+      , check that in and push, to see how the build system behaves if
+      en-US changes. Tip: It should update all locales.
+    </p>
+    
+    <h2>Shutting down</h2>
+    <p>Enough learning, let's shut the bots down in a safe order:</p>
+    <dl>
+    <dt>get-pushes</dt>
+    <dd><pre>(env) $ kill `cat twistd.pid`</pre>
+    <dt>slave</dt>
+    <dd><pre>(env) $ ./scripts/buildbot stop slave</pre>
+    <dt>master</dt>
+    <dd><pre>(env) $ ./scripts/buildbot stop test-master</pre>
+    </dl>
+
+  </div>
+</body>
+</html>
