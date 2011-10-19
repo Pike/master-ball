@@ -10,3 +10,6 @@
 [submodule "vendor-local/django"]
 	path = vendor-local/django
 	url = git://github.com/django/django.git
+[submodule "vendor-local/elmo"]
+	path = vendor-local/elmo
+	url = git://github.com/mozilla/elmo.git
