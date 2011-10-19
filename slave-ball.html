@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset='utf-8'>
+
+<title>slave-ball &mdash; Pike/master-ball @ GitHub</title>
+
+<style type="text/css">
+body {
+	margin-top: 1.0em;
+	background-color: #ffffff;
+	font-family: Helvetica, Arial, FreeSans, san-serif;
+	color: #000000;
+}
+
+#container {
+	margin: 0 auto;
+	width: 700px;
+}
+
+h1 {
+	font-size: 3.8em;
+	color: #000000;
+	margin-bottom: 3px;
+}
+
+h1 .small {
+	font-size: 0.4em;
+}
+
+h1 a {
+	text-decoration: none
+}
+
+h2 {
+	font-size: 1.5em;
+	color: #000000;
+}
+
+h3 {
+	text-align: center;
+	color: #000000;
+}
+
+a {
+	color: #000000;
+}
+
+.description {
+	font-size: 1.2em;
+	margin-bottom: 30px;
+	margin-top: 30px;
+	font-style: italic;
+}
+
+.download {
+	float: right;
+}
+
+pre {
+	background: #000;
+	color: #fff;
+	padding: 15px;
+}
+
+hr {
+	border: 0;
+	width: 80%;
+	border-bottom: 1px solid #aaa
+}
+
+.footer {
+	text-align: center;
+	padding-top: 30px;
+	font-style: italic;
+}
+</style>
+</head>
+
+<body>
+  <a href="http://github.com/Pike/master-ball"><img
+    style="position: absolute; top: 0; right: 0; border: 0;"
+    src="http://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png"
+    alt="Fork me on GitHub" /></a>
+
+  <div id="container">
+
+    <h1>slave-ball</h1>
+
+    <div class="description">
+      <em>slave-ball</em> runs a buildbot slave for your master-ball.
+    </div>
+
+    <h2>First of all...</h2>
+    <p>You need to first start the test-master (master buildbot) running.<br>
+    Also, slave-ball needs to have <strong>its own virtualenv</strong> with the 
+    requirements.txt installed.
+    </p>
+    
+    <p>You also need the username and password to create the slave here. That you
+    will find inside <code>master-ball/test-master/slaves.json</code>.<br>
+    Also you'll need to know the port number of the <code>test-master</code> which you
+    will find inside <code>master-ball/test-master/master.cfg</code>. It'll look like this:
+    </p>
+    <pre>c['slavePortnum'] = 9876</pre>
+    
+    <p>
+    First, to create the slave, run:
+    </p>
+    <pre>./scripts/buildbot create-slave slave localhost:9876 cs0 pwd</pre>
+    
+    <p>
+    This would have created a directory called <code>slave</code> containing, 
+    amongst other things, a <code>buildbot.tac</code> file. 
+    </p>
+    <p>
+    Next, you need to update the file <code>slave/buildbot.tac</code> so that
+    it's able to pull in all the vendor-local dependencies. This is automated by running:
+    </p>
+    <pre>python scripts/update-slave.py slave</pre>
+    
+    <p>
+    Finally, you can start the slave!
+    </p>
+    <pre>./scripts/buildbot start slave</pre>
+    
+    <p>You can monitor what it's doing by running:</p>
+    <pre>tail -f slave/twistd.log </pre>
+    
+    <h2>Shutting down</h2>
+    <p>
+    Stopping the slave is easy:
+    </p>
+    <pre>(env) $ ./scripts/buildbot stop slave</pre>
+
+  </div>
+</body>
+</html>
