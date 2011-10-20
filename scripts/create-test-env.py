@@ -5,7 +5,7 @@ import subprocess
 import sys
 
 
-ENVPATH = 'env'
+ENVPATH = '@master'
 
 def ensureCustomRepository(reponame, revision, hgcustom_orig, env_path):
     base = os.path.join(env_path, 'hgcustom')
