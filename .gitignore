@@ -1,6 +1,7 @@
 @master
 *.pyc
 twistd.log
+twistd.pid
 twisted/plugins/dropin.cache
 
 # generated files in test-master
