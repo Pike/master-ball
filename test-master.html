@@ -123,7 +123,7 @@ DATABASES = {
     'default': {} # you know this stuff
 }
 REPOSITORY_BASE = '/tmp/stage/repos/'
-buildbase = '/tmp/builds/
+buildbase = '/tmp/builds/'
 </pre>
     <p>
       The
@@ -222,6 +222,8 @@ buildbase = '/tmp/builds/
       , so if you choose differently, you'll need to tweak that.
     </p>
     <pre>$ ./manage.py loaddata localhost</pre>
+    <p>This will find any file called <code>localhost.json</code> in any of the
+    installed apps and install it.</p>
 
     <h2>Master setup</h2>
     <p>As you're in a new shell now, you want to activate your
