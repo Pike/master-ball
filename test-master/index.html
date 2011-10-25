@@ -74,6 +74,55 @@ hr {
 	padding-top: 30px;
 	font-style: italic;
 }
+
+.note {
+	background-color: #ccc;
+	border-left: 3px solid #aaa;
+	padding: 1em;
+	margin: 2em 0em 2em 1em;
+}
+</style>
+<!-- content styles to locate and disambiguate shell commands -->
+<style type="text/css">
+code.no-env.master-ball:before {
+	content: "master-ball$ ";
+	color: #CCCCCC;
+}
+
+code.no-env.stage:before {
+	content: "stage$ ";
+	color: #CCCCCC;
+}
+
+code.env.stage:before {
+	content: "(@master) stage$ ";
+	color: #CCCCCC;
+}
+
+code.env.stage-ab:before {
+	content: "(@master) ab$ ";
+	color: #CCCCCC;
+}
+
+code.elmo:before {
+	content: "(@elmo) elmo$ ";
+	color: #CCCCCC;
+}
+
+code.env.test-master:before {
+	content: "(@master) test-master$ ";
+	color: #CCCCCC;
+}
+
+code.env.master-ball:before {
+	content: "(@master) master-ball$ ";
+	color: #CCCCCC;
+}
+
+code.env.slave-ball:before {
+	content: "(@slave) slave-ball$ ";
+	color: #CCCCCC;
+}
 </style>
 </head>
 
@@ -105,6 +154,16 @@ hr {
       <li>Run the bots</li>
       <li>Watch the results</li>
     </ul>
+
+    <div class="note">
+      <p>There are going to be several shell terminals and
+      virtualenvs throughout this page. In each command, the shell prompt
+      indicates the activated virtualenv, if so, and the directory you should be
+      in. That is, a</p>
+      <pre><code class="env master-ball">ls</code></pre>
+      <p>is a <code>ls</code> in the <code>master-ball</code> directory with the
+      <code>@master</code> virtualenv activated.</p>
+    </div>
 
     <h2 id="configure">Install and Configure test-master</h2>
     <p>
@@ -164,10 +223,10 @@ buildbase = '/tmp/builds/'
     </p>
     <p>Sounds all really complicated, but there's help.</p>
     <p>For the stage setup, you just want to run</p>
-    <pre>$ python scripts/create-test-env.py /tmp/stage</pre>
+    <pre><code class="no-env master-ball">python scripts/create-test-env.py $HOME/stage</code></pre>
     <p>This script does a few things:</p>
     <ul>
-      <li>create a virtualenv in <code>env</code></li>
+      <li>create a virtualenv in <code>@master</code></li>
       <li>install the requirements.txt in that env</li>
       <li>upload our hg server infrastructure into that env</li>
       <li>create the stage:
@@ -191,7 +250,7 @@ buildbase = '/tmp/builds/'
       First, though, you'll want to activate your virtualenv, as that's
       picking the required version of hg.
     </p>
-    <pre>$ . env/bin/activate</pre>
+    <pre><code class="no-env master-ball">. \@master/bin/activate</code></pre>
     <p>
       Now head to your stage area, and start the mercurial server, on
       port
@@ -199,7 +258,7 @@ buildbase = '/tmp/builds/'
       . If you want to use a different port, you can do that, but you'll
       need to tweak the database objects in elmo below.
     </p>
-    <pre>(env) $ hg serve --webdir-conf=webdir.conf -p 8001</pre>
+    <pre><code class="env stage">hg serve --webdir-conf=webdir.conf -p 8001</code></pre>
     <p>
       You can verify that your webserver is set up right by going to <a
         href="http://localhost:8001/">the main page</a>, and in
@@ -221,18 +280,21 @@ buildbase = '/tmp/builds/'
       <code>http://localhost:8001/</code>
       , so if you choose differently, you'll need to tweak that.
     </p>
-    <pre>$ ./manage.py loaddata localhost</pre>
-    <p>This will find any file called <code>localhost.json</code> in any of the
-    installed apps and install it.</p>
+    <pre><code class="elmo">./manage.py loaddata localhost</code></pre>
+    <p>
+      This will find any file called
+      <code>localhost.json</code>
+      in any of the installed apps and install it.
+    </p>
 
     <h2>Master setup</h2>
     <p>As you're in a new shell now, you want to activate your
       virtualenv again.</p>
-    <pre>$ . env/bin/activate</pre>
+    <pre><code class="no-env master-ball">. @master/bin/activate</code></pre>
     <p>
       For the stuff that follows, you should generally have that on.
       You'll see by the
-      <code>(env)</code>
+      <code>(@master)</code>
       prefix in the code snippets which lines are in the env for sure.
     </p>
     <p>
@@ -240,8 +302,8 @@ buildbase = '/tmp/builds/'
       <code>test-master</code>
       , so let's go there, and create the master.
     </p>
-    <pre>(env) $ cd test-master
-(env) $ ../scripts/buildbot create-master .</pre>
+    <pre><code class="env master-ball">cd test-master</code>
+<code class="env test-master">../scripts/buildbot create-master .</code></pre>
     <p>
       You only need to do that once. Next we need the
       <code>local.py</code>
@@ -262,44 +324,89 @@ buildbase = '/tmp/builds/</pre>
     </p>
 
     <h2>Running the bots</h2>
-    <p>
-      The first bot you want to run is the pushlog poller, which copies
-      the pushlog databases from your
-      <code>repos</code>
-      into elmo. You probably want to do this <em>before</em> you start
-      the buildbot master, just because it's more realistic to have
-      repos first, and then builds.
+    <p class="note">
+      The first time you run the bots, you may want to run the
+      <code>get-pushes</code>
+      daemon before the build bots. Usually, it's the last bot to start,
+      though.<br> This is to get the initial push to
+      <code>en-US</code>
+      into the database without triggering a build for it, which is
+      closer to what happens in reality.
     </p>
-    <h3>get-pushes</h3>
-    <p>You'll want to run this from <code>master-ball/</code> directory.</p>
-    
-    <pre>(env) $ PYTHONPATH=$PWD/test-master twistd get-pushes -s settings_master -n
-(env) $ tail -f twistd.log</pre>
     <p>
-      Now you're looking at the log file of the get-pushes daemon. It
-      should find a push on
-      <code>mozilla</code>
-      , and then cycle every few seconds.
+      There are 5 services involved in running the dashboard, the <a
+        href="#mercurial">mercurial web server</a>, the <a href="#elmo">elmo
+        webserver</a>, the buildbot <a href="#master">master</a> and <a
+        href="#slave">slave</a>, and the twistd <a href="#get-pushes">get-pushes</a>
+      daemon. You always want to have your mercurial server up. The elmo
+      server can be up or not, it doesn't interfere with the other bots.
+      It's just good to be there to check that the rest reports as
+      expected. The three remaining bots are the actual build system,
+      and the starting order of those has actual impact on what happens.
     </p>
-    <h3>buildbot master and slave</h3>
-    <p>Starting the master and slave is rather easy, in the master
-      env, run</p>
-    <pre>(env) $ ./scripts/buildbot start test-master
-(env) $ tail -f test-master/twistd.log</pre>
+    <h3 id="mercurial">mercurial web server</h3>
+    <p>Before you start the build automation, be sure that the
+      mercurial webserver is running.</p>
+    <pre><code class="env stage">hg serve --webdir-conf=webdir.conf -p 8001</code></pre>
+    <p>The master and slave both need each other to get any work
+      done. The order of startup isn't really important, as the slave
+      continuously try to connect to the master. When they don't reach
+      the master, they back up, though. The quickest startup time is to
+      start the master first, and then the slave.</p>
+    <h3 id="master">buildbot master</h3>
+    <p>
+      In the
+      <code>master-ball</code>
+      directory, do
+    </p>
+    <pre><code class="env master-ball">./scripts/buildbot start test-master</code>
+<code class="env master-ball">tail -f test-master/twistd.log</code></pre>
     <p>
       where
       <code>test-master</code>
       is the path to the test-master directory, not the name or
       something else.
     </p>
+    <p>You'll already see a bit of work in the log, as the master
+      gets itself ready to get crackin'. But for the actual work, it
+      needs the slave(s).</p>
+    <h3 id="slave">buildbot slave</h3>
     <p>
       In the virtualenv of
       <code>slave-ball</code>
-      , run
+      and that directory, run
     </p>
-    <pre>(env) $ ./scripts/buildbot start slave
-(env) $ tail -f slave/twistd.log</pre>
-    <h3>elmo</h3>
+    <pre><code class="env slave-ball">./scripts/buildbot start slave</code>
+<code class="env slave-ball">tail -f slave/twistd.log</code></pre>
+    <p>
+      You want to make sure that the bots do the right thing up to here,
+      in particular that the <a href="#master-started">startup
+        builds are successful</a>.
+    </p>
+    <p>
+      First bot you want to run is the pushlog poller, which copies the
+      pushlog databases from your
+      <code>repos</code>
+      into elmo. You probably want to do this <em>before</em> you start
+      the buildbot master, just because it's more realistic to have
+      repos first, and then builds.
+    </p>
+    <h3 id="get-pushes">get-pushes</h3>
+    <p>
+      You'll want to run this from
+      <code>master-ball/</code>
+      directory.
+    </p>
+
+    <pre><code class="env master-ball">PYTHONPATH=$PWD/test-master twistd get-pushes -s settings_master -n</code>
+<code class="env master-ball">tail -f twistd.log</code></pre>
+    <p>
+      Now you're looking at the log file of the get-pushes daemon. If you're
+      running it for the first time, you should find a push on
+      <code>mozilla</code> , and then cycle every few seconds.
+    </p>
+
+    <h3 id="elmo">elmo</h3>
     <p>
       Last but not least, you want to run the elmo webserver, too. If
       you're using a virtualenv for elmo, us that. We'll assume the
@@ -307,7 +414,7 @@ buildbase = '/tmp/builds/</pre>
       <code>8000</code>
       .
     </p>
-    <pre>$ ./manage.py runserver</pre>
+    <pre><code class="elmo">./manage.py runserver</code></pre>
 
     <h2>Watch the results</h2>
     <p>You should have 5 shells with logs for each part of the
@@ -331,7 +438,7 @@ buildbase = '/tmp/builds/</pre>
       <code>mozilla</code>
       repository.
     </p>
-    <p>
+    <p id="master-started">
       Whenever you start the buildmaster, it will trigger a build per <em>tree</em>
       to get more data from the
       <code>l10n.ini</code>
@@ -367,8 +474,8 @@ buildbase = '/tmp/builds/</pre>
       for a start, and push. Be sure to have your virtualenv activated
       again.
     </p>
-    <pre>(env) $ cd /tmp/stage/workdir/l10n/ab
-(env) $ hg push</pre>
+    <pre><code class="env stage">cd workdir/l10n/ab</code>
+<code class="env stage-ab">hg push</code></pre>
     <p>That will tell you that it's inserting that changeset to the
       pushlog. That's the local one per repository that our mercurial
       hooks do.</p>
@@ -406,16 +513,28 @@ buildbase = '/tmp/builds/</pre>
       , check that in and push, to see how the build system behaves if
       en-US changes. Tip: It should update all locales.
     </p>
-    
+
     <h2>Shutting down</h2>
     <p>Enough learning, let's shut the bots down in a safe order:</p>
+    <p>First, stop taking new pushes into our system, and kill</p>
     <dl>
-    <dt>get-pushes</dt>
-    <dd><pre>(env) $ kill `cat twistd.pid`</pre>
-    <dt>slave</dt>
-    <dd><pre>(env) $ ./scripts/buildbot stop slave</pre>
-    <dt>master</dt>
-    <dd><pre>(env) $ ./scripts/buildbot stop test-master</pre>
+      <dt>get-pushes</dt>
+      <dd>
+        <pre><code class="env master-ball">kill `cat twistd.pid`</code></pre>
+      </dd>
+    </dl>
+    <p>Make sure that master and slave are idle, i.e., the logs only show pings,
+    and then stop master and slave. The order doesn't matter much at this
+    point.</p>
+    <dl>
+      <dt>slave</dt>
+      <dd>
+        <pre><code class="env slave-ball">./scripts/buildbot stop slave</code></pre>
+      </dd>
+      <dt>master</dt>
+      <dd>
+        <pre><code class="env master-ball">./scripts/buildbot stop test-master</code></pre>
+      </dd>
     </dl>
 
   </div>
