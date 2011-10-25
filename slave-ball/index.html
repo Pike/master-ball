@@ -74,6 +74,25 @@ hr {
 	padding-top: 30px;
 	font-style: italic;
 }
+
+.note {
+	background-color: #ccc;
+	border-left: 3px solid #aaa;
+	padding: 1em;
+	margin: 2em 0em 2em 1em;
+}
+</style>
+<!-- content styles to locate and disambiguate shell commands -->
+<style type="text/css">
+code.no-env.slave-ball:before {
+	content: "slave-ball$ ";
+	color: #CCCCCC;
+}
+
+code.env.slave-ball:before {
+	content: "(@slave) slave-ball$ ";
+	color: #CCCCCC;
+}
 </style>
 </head>
 
@@ -91,47 +110,62 @@ hr {
       <em>slave-ball</em> runs a buildbot slave for your master-ball.
     </div>
 
-    <h2>First of all...</h2>
-    <p>You need to first start the test-master (master buildbot) running.<br>
-    Also, slave-ball needs to have <strong>its own virtualenv</strong> with the 
-    requirements.txt installed.
-    </p>
-    
-    <p>You also need the username and password to create the slave here. That you
-    will find inside <code>master-ball/test-master/slaves.json</code>.<br>
-    Also you'll need to know the port number of the <code>test-master</code> which you
-    will find inside <code>master-ball/test-master/master.cfg</code>. It'll look like this:
-    </p>
+    <h2>Get slave-ball</h2>
+    <p>You start off with a clone of slave-ball &hellip;</p>
+    <pre>$ git clone git://github.com/Pike/slave-ball
+$ cd slave-ball</pre>
+    <p>and then you get the submodules. You only want the first level
+    of submodules, not <em>recursive</em>.</p>
+    <pre>$ git submodule init
+$ git submodule update</pre>
+
+    <h2>Install dependencies</h2>
+    <p>If you're not running a dedicated slave, you probably want to create a
+    virtualenv. That's not required, though. We're still going to denote shell
+    commands which assume that you have the dependencies installed with a
+    <code>(@slave)</code> prompt.</p>
+    <h3>Create virtualenv, if required</h3>
+    <pre><code class="no-env slave-ball">virtualenv \@slave</code>
+<code class="no-env slave-ball">. \@slave/bin/activate</code></pre>
+    <h3>requirements.txt</h3>
+    <p>Now install the requirements for slave-ball&hellip;</p>
+    <pre><code class="env slave-ball">pip install -U requirements.txt</code></pre>
+
+    <h2>Create buildbot slave</h2>
+    <h3>Gathering data</h3>
+    <p>You need to pick up a few data points from the master you want this slave
+    to connect to. For one, there's the location on the network where the master
+    is, and then there's the username and password that identify this slave.</p>
+    <p>You will find the latter inside your master's <code>slaves.json</code>.</p>
+    <p>In addition to the network host of the master, you'll also need the port
+    number, which you will find inside <code>master.cfg</code>. It'll look like
+    this:</p>
     <pre>c['slavePortnum'] = 9876</pre>
+    <h3>The bot</h3>
+    <p>With the data to create the slave, run:</p>
+    <pre><code class="env slave-ball">./scripts/buildbot create-slave slave localhost:9876 cs0 pwd</code></pre>
+    <p>The last three arguments to this command are the <code>host:port</code>,
+    <code>name</code> and <code>password</code> we collected above.</p>
     
-    <p>
-    First, to create the slave, run:
-    </p>
-    <pre>./scripts/buildbot create-slave slave localhost:9876 cs0 pwd</pre>
+    <p>This would have created a directory called <code>slave</code> containing,
+    amongst other things, a <code>buildbot.tac</code> file.</p>
+    <p>Next, you need to update the file <code>slave/buildbot.tac</code> so that
+    it's able to pull in all the vendor-local dependencies. This is automated by
+    running:</p>
+    <pre><code class="env slave-ball">python scripts/update-slave.py slave</code></pre>
     
-    <p>
-    This would have created a directory called <code>slave</code> containing, 
-    amongst other things, a <code>buildbot.tac</code> file. 
-    </p>
-    <p>
-    Next, you need to update the file <code>slave/buildbot.tac</code> so that
-    it's able to pull in all the vendor-local dependencies. This is automated by running:
-    </p>
-    <pre>python scripts/update-slave.py slave</pre>
-    
-    <p>
-    Finally, you can start the slave!
-    </p>
-    <pre>./scripts/buildbot start slave</pre>
+    <h2 id="start">Starting the slave</h2>
+    <p>Finally, you can start the slave!</p>
+    <pre><code class="env slave-ball">./scripts/buildbot start slave</code></pre>
     
     <p>You can monitor what it's doing by running:</p>
-    <pre>tail -f slave/twistd.log </pre>
+    <pre><code class="env slave-ball">tail -f slave/twistd.log</code></pre>
     
-    <h2>Shutting down</h2>
+    <h2 id="stop">Shutting down</h2>
     <p>
     Stopping the slave is easy:
     </p>
-    <pre>(env) $ ./scripts/buildbot stop slave</pre>
+    <pre><code class="env slave-ball">./scripts/buildbot stop slave</code></pre>
 
   </div>
 </body>
