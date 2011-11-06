@@ -4,10 +4,10 @@ twistd.log
 twistd.pid
 twisted/plugins/dropin.cache
 
-# generated files in test-master
-test-master/Makefile.sample
-test-master/buildbot.tac
-test-master/changes.pck
-test-master/local.py
-test-master/master.cfg.sample
-test-master/public_html
+# generated files in *-master
+*-master/Makefile.sample
+*-master/buildbot.tac
+*-master/changes.pck
+*-master/local.py
+*-master/master.cfg.sample
+*-master/public_html
