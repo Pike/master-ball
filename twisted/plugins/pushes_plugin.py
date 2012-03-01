@@ -109,7 +109,7 @@ def getPoller(options):
     if options["settings"] is None:
             raise usage.UsageError("specify a settings module")
     os.environ["DJANGO_SETTINGS_MODULE"] = options["settings"]
-    from pushes.models import Repository, Forest, Locale
+    from life.models import Repository, Forest, Locale
     from pushes.utils import getURL, handlePushes, PushJS
 
     class PushPoller(object):
