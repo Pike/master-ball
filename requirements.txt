@@ -1,4 +1,4 @@
-mercurial==1.5.4
+mercurial==2.1.2
 Twisted==8.2.0
 simplejson
 MySQL-python

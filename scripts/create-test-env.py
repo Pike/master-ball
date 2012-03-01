@@ -17,8 +17,8 @@ def ensureCustomRepository(reponame, revision, hgcustom_orig, env_path):
         if rv:
             raise RuntimeError("hg failed to pull hgcustom's %s" % reponame)
     else:
-        rv = subprocess.call(['hg', '--config', 'format.dotencode=0', 'clone',
-                               '--noupdate','--pull', '%s/%s' % (hgcustom_orig, reponame)],
+        rv = subprocess.call(['hg', 'clone', '--noupdate','--pull',
+                              '%s/%s' % (hgcustom_orig, reponame)],
                                cwd = base)
         if rv:
             raise RuntimeError('hg failed to clone %s' % reponame)
@@ -122,8 +122,8 @@ def createEnvironment(env_path, hgcustom_orig):
         if rv:
             raise RuntimeError("Failed to create virtualenv in " + env_path)
     hgcustom = {
-        'hg_templates': 'aebc5445f05f',
-        'hghooks': 'ebea31cf1cc0',
+        'hg_templates': '672340227bea',
+        'hghooks': '1e7a365890ab',
         'pushlog': 'e99a36d3fd4a'
         }
     if not (hgcustom_orig.startswith('http://') or
