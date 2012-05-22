@@ -1,5 +1,4 @@
 import sys; sys.__plen = len(sys.path) - 1
-django
 elmo/apps
 elmo
 buildbot
