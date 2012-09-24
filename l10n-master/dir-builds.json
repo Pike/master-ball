@@ -1,0 +1,21 @@
+[
+  {
+    "name": "gaia",
+    "repo": "gaia-l10n",
+    "server": "http://hg.mozilla.org/",
+    "locales":
+    [
+     "es",
+     "pt-BR"
+     ]
+  },
+  {
+    "name": "gaia-community",
+    "repo": "gaia-l10n",
+    "server": "http://hg.mozilla.org/",
+    "locales":
+    [
+     "pl"
+     ]
+  }
+]
