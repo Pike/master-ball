@@ -15,7 +15,27 @@
     "server": "http://hg.mozilla.org/",
     "locales":
     [
-     "pl"
+      "cs",
+      "cy",
+      "de",
+      "el",
+      "eo",
+      "ff",
+      "fr",
+      "fy-NL",
+      "gd",
+      "he",
+      "hu",
+      "it",
+      "ko",
+      "nl",
+      "pa",
+      "pl",
+      "ro",
+      "ru",
+      "sl",
+      "sq",
+      "zh-TW"
      ]
   }
 ]
