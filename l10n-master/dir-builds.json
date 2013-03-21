@@ -74,5 +74,21 @@
       "zh-CN",
       "zh-TW"
      ]
+  },
+  {
+    "name": "gaia-v1_0_1",
+    "repo": "releases/gaia-l10n/v1_0_1",
+    "server": "http://hg.mozilla.org/",
+    "locales":
+    [
+      "cs",
+      "de",
+      "es",
+      "hr",
+      "hu",
+      "pl",
+      "pt-BR",
+      "ro"
+     ]
   }
 ]
