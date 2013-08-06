@@ -5,6 +5,7 @@
     "server": "http://hg.mozilla.org/",
     "locales":
     [
+      "ca",
       "cs",
       "de",
       "el",
@@ -35,7 +36,6 @@
       "bn-BD",
       "bn-IN",
       "bs",
-      "ca",
       "cy",
       "da",
       "eo",
