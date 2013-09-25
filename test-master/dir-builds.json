@@ -2,6 +2,14 @@
   {
     "name": "add-on",
     "repo": "addon",
-    "server": "http://localhost:8001/"
+    "server": "http://localhost:8001/",
+    "locales" : ["de"]
+  },
+  {
+    "name": "add-on-release",
+    "repo": "addon",
+    "en-US-repo": "addon-release",
+    "server": "http://localhost:8001/",
+    "locales" : ["fr"]
   }
 ]
