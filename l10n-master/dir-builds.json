@@ -2,6 +2,7 @@
   {
     "name": "gaia",
     "repo": "gaia-l10n",
+    "en-US-repo": "releases/gaia-l10n/v1_2",
     "server": "http://hg.mozilla.org/",
     "locales":
     [
@@ -12,6 +13,7 @@
       "es",
       "hr",
       "hu",
+      "it",
       "nl",
       "pl",
       "pt-BR",
@@ -33,8 +35,6 @@
       "as",
       "ast",
       "be",
-      "bg",
-      "bn-BD",
       "bn-IN",
       "bs",
       "cy",
@@ -53,13 +53,11 @@
       "hi-IN",
       "ht",
       "id",
-      "it",
       "ja",
       "km",
       "kn",
       "ko",
       "lij",
-      "mk",
       "ms",
       "ml",
       "ne-NP",
@@ -72,9 +70,7 @@
       "te",
       "th",
       "ur",
-      "vi",
-      "zh-CN",
-      "zh-TW"
+      "vi"
      ]
   },
   {
@@ -94,12 +90,40 @@
      ]
   },
   {
+    "name": "gaia-v1_1",
+    "repo": "releases/gaia-l10n/v1_1",
+    "server": "http://hg.mozilla.org/",
+    "locales":
+    [
+      "ca",
+      "cs",
+      "de",
+      "el",
+      "es",
+      "fr",
+      "hr",
+      "hu",
+      "it",
+      "nl",
+      "pl",
+      "pt-BR",
+      "ro",
+      "ru",
+      "sk",
+      "sr-Cyrl",
+      "sr-Latn",
+      "tr",
+      "zh-TW"
+     ]
+  },
+  {
     "name": "gaia-v1_2",
     "repo": "releases/gaia-l10n/v1_2",
     "server": "http://hg.mozilla.org/",
     "locales":
     [
       "bg",
+      "bn-BD",
       "ca",
       "cs",
       "de",
@@ -119,6 +143,7 @@
       "sr-Cyrl",
       "sr-Latn",
       "tr",
+      "zh-CN",
       "zh-TW"
      ]
   }
