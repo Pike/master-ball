@@ -122,7 +122,7 @@ def getPoller(options):
 
         def __init__(self, opts):
             self.limit = int(opts.get('limit', 200))
-            self.timeout = 10
+            self.timeout = 20
             self.repos = []
             self.cache = {}
             self.moredata = {}
