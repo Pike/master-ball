@@ -79,64 +79,6 @@
      ]
   },
   {
-    "name": "gaia-v1_1",
-    "repo": "releases/gaia-l10n/v1_1",
-    "server": "http://hg.mozilla.org/",
-    "locales":
-    [
-      "ca",
-      "cs",
-      "de",
-      "el",
-      "es",
-      "fr",
-      "hr",
-      "hu",
-      "it",
-      "nl",
-      "pl",
-      "pt-BR",
-      "ro",
-      "ru",
-      "sk",
-      "sr-Cyrl",
-      "sr-Latn",
-      "tr",
-      "zh-TW"
-     ]
-  },
-  {
-    "name": "gaia-v1_2",
-    "repo": "releases/gaia-l10n/v1_2",
-    "server": "http://hg.mozilla.org/",
-    "locales":
-    [
-      "bg",
-      "bn-BD",
-      "ca",
-      "cs",
-      "de",
-      "el",
-      "es",
-      "fr",
-      "hr",
-      "hu",
-      "it",
-      "mk",
-      "nl",
-      "pl",
-      "pt-BR",
-      "ro",
-      "ru",
-      "sk",
-      "sr-Cyrl",
-      "sr-Latn",
-      "tr",
-      "zh-CN",
-      "zh-TW"
-     ]
-  },
-  {
     "name": "gaia-v1_3",
     "repo": "releases/gaia-l10n/v1_3",
     "server": "http://hg.mozilla.org/",
