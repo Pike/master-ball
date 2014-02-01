@@ -33,7 +33,6 @@
   {
     "name": "gaia-community",
     "repo": "gaia-l10n",
-    "en-US-repo": "releases/gaia-l10n/v1_3",
     "server": "http://hg.mozilla.org/",
     "locales":
     [
