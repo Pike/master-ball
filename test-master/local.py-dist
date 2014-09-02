@@ -20,3 +20,6 @@ DATABASES = {
 REPOSITORY_BASE = ''
 
 buildbase = ''
+
+ES_COMPARE_HOST = ''
+ES_COMPARE_INDEX = ''
