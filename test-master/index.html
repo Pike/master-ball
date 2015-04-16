@@ -89,18 +89,23 @@ code.no-env.master-ball:before {
 	color: #CCCCCC;
 }
 
+code.no-env.a10n:before {
+	content: "a10n$ ";
+	color: #CCCCCC;
+}
+
 code.no-env.stage:before {
 	content: "stage$ ";
 	color: #CCCCCC;
 }
 
 code.env.stage:before {
-	content: "(@master) stage$ ";
+	content: "(env) stage$ ";
 	color: #CCCCCC;
 }
 
 code.env.stage-ab:before {
-	content: "(@master) ab$ ";
+	content: "(env) ab$ ";
 	color: #CCCCCC;
 }
 
@@ -116,6 +121,11 @@ code.env.test-master:before {
 
 code.env.master-ball:before {
 	content: "(@master) master-ball$ ";
+	color: #CCCCCC;
+}
+
+code.env.a10n:before {
+	content: "(env) a10n$ ";
 	color: #CCCCCC;
 }
 
@@ -203,9 +213,11 @@ SECRET_KEY = 'Do Not Tell Me'
     </p>
 
     <h2>Master setup</h2>
-    <p>As you're in a new shell now, you want to activate your
-      virtualenv again.</p>
-    <pre><code class="no-env master-ball">. @master/bin/activate</code></pre>
+    <p>As you're in a new shell now, and we'll want to create a virtualenv
+    for master now..</p>
+    <pre><code class="no-env master-ball">virtualenv @master</code>
+<code class="no-env master-ball">. @master/bin/activate</code>
+<code class="env master-ball">pip install -r requirements.txt</code></pre>
     <p>
       For the stuff that follows, you should generally have that on.
       You'll see by the
@@ -228,15 +240,27 @@ SECRET_KEY = 'Do Not Tell Me'
 DATABASES = {
     'default': {} # you know this stuff
 }
-REPOSITORY_BASE = '/tmp/stage/repos/'
-buildbase = '/tmp/builds/</pre>
+REPOSITORY_BASE = '/my/home/stage/repos/'
+buildbase = '/my/home/stage/builds/
+
+SECRET_KEY = 'Do Not Tell Me'</pre>
     <p>
       That's all. Next you want to set up a buildbot slave, with
-      <code>slave-ball</code>
-      . You want to set that up with name and password from
-      <code>slaves.json</code>
-      .
+      <code>slave-ball</code>.
+      You want to set that up with name and password from
+      <code>slaves.json</code>.
     </p>
+
+    <h3 id="es-index">Elasticsearch Index</h3>
+    <p>You need to have an elasticsearch instance running. The documentation
+    here assumes that you're running it on `localhost` and the standard
+    `9200` port.</p>
+    <p>For the initial setup, you need to create an <em>Index</em>, where
+    elasticsearch (ES in short) stores its data.</p>
+    <p>To do so, head over to your <code>elmo</code> install, activate the
+    virtualenv there, and run</p>
+    <pre><code class="elmo">./manage.py createcompareindex</code></pre>
+
     <h3 id="slave-setup">Slave setup</h3>
     <p>The slave setup is the very same for <code>test-master</code> and
     <code>l10n-master</code>, so pick that up quickly from the <a
@@ -253,16 +277,37 @@ buildbase = '/tmp/builds/</pre>
       closer to what happens in reality.
     </p>
     <p>
-      There are 5 services involved in running the dashboard, the <a
-        href="#mercurial">mercurial web server</a>, the <a href="#elmo">elmo
-        webserver</a>, the buildbot <a href="#master">master</a> and <a
-        href="#slave">slave</a>, and the twistd <a href="#get-pushes">get-pushes</a>
-      daemon. You always want to have your mercurial server up. The elmo
+      There are 8 services involved in running the dashboard, the
+      <a href="#elmo">elmo webserver</a>, the <a
+      href="#mercurial">mercurial web server</a>,
+      <a href="#es">elasticsearch</a>, the buildbot
+      <a href="#master">master</a> and <a href="#slave">slave</a>,
+      <a href="#rabbitmq">rabbitmq</a>, <a href="#hg">a10n hg</a>, and the
+      twistd <a href="#get-pushes">get-pushes</a>
+      daemon. You always want to have your mercurial server up. Same goes for
+      elasticsearch and rabbitmq. The elmo
       server can be up or not, it doesn't interfere with the other bots.
       It's just good to be there to check that the rest reports as
-      expected. The three remaining bots are the actual build system,
+      expected. The four remaining bots and services are the actual build system,
       and the starting order of those has actual impact on what happens.
     </p>
+
+    <h3 id="elmo">elmo</h3>
+    <p>
+      Often you want to run the elmo webserver, too. If
+      you're using a virtualenv for elmo, use that. We'll assume the
+      default port here and going forward, <code>8000</code>.
+    </p>
+    <pre><code class="elmo">./manage.py runserver</code></pre>
+
+    <h3 id="rabbitmq">rabbitmq</h3>
+    <p>On most systems, <code>rabbitmq</code> will be automatically run as
+    part of the boot process.</p>
+
+    <h3 id="es">elasticsearch</h3>
+    <p>Find the installation path to elasticsearch, and run</p>
+    <pre><code>./bin/elasticsearch</code></pre>
+
     <h3 id="mercurial">mercurial web server</h3>
     <p>Before you start the build automation, be sure that the
       mercurial webserver is running.</p>
@@ -303,46 +348,39 @@ buildbase = '/tmp/builds/</pre>
         builds are successful</a>.
     </p>
     <p>
-      First bot you want to run is the pushlog poller, which copies the
-      pushlog databases from your
-      <code>repos</code>
-      into elmo. You probably want to do this <em>before</em> you start
-      the buildbot master, just because it's more realistic to have
+      Next up is the combo of <code>a10n hg</code> and <code>get-pushes</code>.
+      <code>get-pushes</code> is a daemon that polls the hg server, and adds
+      information about new pushes into <code>rabbitmq</code>. That queue is
+      worked through by <code>a10n hg</code>, which pulls the working repos,
+      and fills in detailed information about new mercurial changesets into the
+      <code>elmo</code> database. You probably want to do this <em>before</em>
+      you start the buildbot master, just because it's more realistic to have
       repos first, and then builds.
     </p>
-    <h3 id="get-pushes">get-pushes</h3>
-    <p>
-      You'll want to run this from
-      <code>master-ball/</code>
-      directory.
-    </p>
 
-    <pre><code class="env master-ball">PYTHONPATH=$PWD/test-master twistd get-pushes -s settings_master -n</code>
-<code class="env master-ball">tail -f twistd.log</code></pre>
+    <h3 id="hg">a10n hg</h3>
+    <p>This is run in the <code>a10n</code> directory</p>
+    <pre><code class="env a10n">./scripts/a10n hg</code></pre>
+
+    <h3 id="get-pushes">get-pushes</h3>
+    <p>This is also run in the <code>a10n</code> directory</p>
+
+    <pre><code class="env a10n">twistd -n get-pushes</code></pre>
     <p>
       Now you're looking at the log file of the get-pushes daemon. If you're
       running it for the first time, you should find a push on
       <code>mozilla</code> , and then cycle every few seconds.
     </p>
 
-    <h3 id="elmo">elmo</h3>
-    <p>
-      Last but not least, you want to run the elmo webserver, too. If
-      you're using a virtualenv for elmo, us that. We'll assume the
-      default port here and going forward,
-      <code>8000</code>
-      .
-    </p>
-    <pre><code class="elmo">./manage.py runserver</code></pre>
-
     <h2>Watch the results</h2>
-    <p>You should have 5 shells with logs for each part of the
+    <p>You should have 6 shells with logs for each part of the
       automation now:</p>
     <ol>
       <li>the django log for elmo</li>
       <li>the hg output of hg serve (noisy, that's cool)</li>
       <li>the tail of twistd.log for get-pushes (this makes hg
         noisy)</li>
+      <li>the output of <code>a10n hg</code>, processing pushes as they come</li>
       <li>the tail of twistd.log for test-master</li>
       <li>the tail of twistd.log for the slave connected to
         test-master</li>
@@ -432,14 +470,34 @@ buildbase = '/tmp/builds/</pre>
       , check that in and push, to see how the build system behaves if
       en-US changes. Tip: It should update all locales.
     </p>
+    <p>If you just want to test build automation, you can fake changes, too.</p>
+    <pre><code class="env master-ball">./scripts/buildbot sendchange --master=localhost:9876 -u me \
+    --branch=l10n --property=locale:de browser/file.properties</code></pre>
+    <p>The options for sendchange mean, resp.</p>
+    <ul>
+      <li>the port of the master, <code>localhost:9876</code></li>
+      <li>your name, pick what you want</li>
+      <li>the <code>branch</code>. For a standalone repository like
+      <code>mozilla</code> this is <code>mozilla</code>. For l10n repositories,
+      this is the parent. So for a change that affected <code>/l10n/de</code>
+      you pass <code>l10n</code></li>
+      <li>If this is an l10n repository, pass the leafname of the repo. I.e.,
+      for a change to <code>/l10n/de</code> pass <code>locale:de</code>. The
+      name and value of the property are separated by a colon.</li>
+      <li>One or more files. Depending on the files you pass and
+      <code>l10n.ini</code>, different builds will be triggered.</li>
+    </ul>
+    <p>Also visit the upstream documentation for
+    <a href="http://docs.buildbot.net/0.7.12/#sendchange">sendchange</a>.</p>
 
     <h2>Shutting down</h2>
     <p>Enough learning, let's shut the bots down in a safe order:</p>
     <p>First, stop taking new pushes into our system, and kill</p>
     <dl>
       <dt>get-pushes</dt>
-      <dd>
-        <pre><code class="env master-ball">kill `cat twistd.pid`</code></pre>
+      <dd>If you're running it interactively, just <code>Crtl-C</code>. If
+      you had it daemonize, you'll need to kill the process.
+        <pre><code class="env a10n">kill `cat twistd.pid`</code></pre>
       </dd>
     </dl>
     <p>Make sure that master and slave are idle, i.e., the logs only show pings,
