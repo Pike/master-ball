@@ -1,7 +1,6 @@
 import sys; sys.__plen = len(sys.path) - 1
 elmo/apps
 elmo
-elmo/vendor-local/lib/python
 buildbot
 locale-inspector
 lib/python
