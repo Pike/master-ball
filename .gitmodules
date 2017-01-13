@@ -1,15 +1,15 @@
 [submodule "vendor-local/locale-inspector"]
 	path = vendor-local/locale-inspector
-	url = git://github.com/Pike/locale-inspector.git
+	url = https://github.com/Pike/locale-inspector.git
 [submodule "vendor-local/compare-locales"]
 	path = vendor-local/compare-locales
-	url = git://github.com/Pike/compare-locales.git
+	url = https://github.com/Pike/compare-locales.git
 [submodule "vendor-local/buildbot"]
 	path = vendor-local/buildbot
-	url = git://github.com/Pike/buildbot.git
+	url = https://github.com/Pike/buildbot.git
 [submodule "vendor-local/django"]
 	path = vendor-local/django
-	url = git://github.com/django/django.git
+	url = https://github.com/django/django.git
 [submodule "vendor-local/elmo"]
 	path = vendor-local/elmo
-	url = git://github.com/mozilla/elmo.git
+	url = https://github.com/mozilla/elmo.git
