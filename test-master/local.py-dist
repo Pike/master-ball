@@ -19,7 +19,7 @@ DATABASES = {
 }
 REPOSITORY_BASE = ''
 
-buildbase = ''
+BUILDBASE = ''
 
 ES_COMPARE_HOST = ''
 ES_COMPARE_INDEX = ''
