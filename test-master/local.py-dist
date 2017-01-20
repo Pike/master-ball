@@ -22,4 +22,4 @@ REPOSITORY_BASE = ''
 BUILDBASE = ''
 
 ES_COMPARE_HOST = ''
-ES_COMPARE_INDEX = ''
+ES_COMPARE_INDEX = 'elmo-comparisons'

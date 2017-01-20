@@ -17,6 +17,10 @@ DATABASES = {
         'TEST_COLLATION': 'utf8_general_ci',
     },
 }
+SECRET_KEY = ''
 REPOSITORY_BASE = ''
 
-buildbase = ''
+BUILDBASE = ''
+
+ES_COMPARE_HOST = ''
+ES_COMPARE_INDEX = 'elmo-comparisons'
