@@ -3,5 +3,4 @@ elmo/apps
 elmo
 buildbot
 locale-inspector
-lib/python
 import sys; new=sys.path[sys.__plen:]; del sys.path[sys.__plen:]; p=getattr(sys,'__egginsert',0); sys.path[0:0]=new; sys.__egginsert = p+len(new)
