@@ -1,4 +1,4 @@
-@master
+slave
 *.pyc
 twistd.log
 twistd.pid
