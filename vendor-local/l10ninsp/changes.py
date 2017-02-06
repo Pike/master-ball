@@ -12,7 +12,7 @@ from twisted.internet.task import LoopingCall
 from buildbot.changes import base, changes
 
 def createChangeSource(pollInterval=3*60):
-    from life.models import Push, Branch
+    from life.models import Push, Branch, File
     from django.db import transaction
     class MBDBChangeSource(base.ChangeSource):
         debug = True
@@ -66,20 +66,23 @@ def createChangeSource(pollInterval=3*60):
                 locale = repo.name[len(branch) + 1:].encode('utf-8')
             else:
                 branch = repo.name.encode('utf-8')
-            for cs in push.changesets.filter(branch=self.branch).order_by('pk'):
-                when = timegm(push.push_date.utctimetuple()) +\
+            files = [f.encode('utf-8') for f in
+                     File.objects
+                        .filter(changeset__pushes=push)
+                        .distinct()
+                        .values_list('path', flat=True)]
+            when = timegm(push.push_date.utctimetuple()) +\
                     push.push_date.microsecond/1000.0/1000
-                c = changes.Change(who=push.user.encode('utf-8'),
-                                    files=map(lambda u: u.encode('utf-8'),
-                                    cs.files.values_list('path', flat=True)),
-                                    revision=cs.revision.encode('utf-8'),
-                                    comments=cs.description.encode('utf-8'),
-                                    when=when,
-                                    branch=branch)
-                if repo.forest is not None:
-                    # locale change
-                    c.locale = locale
-                self.parent.addChange(c)
+            c = changes.Change(who=push.user.encode('utf-8'),
+                               files=files,
+                               revision=push.tip.revision.encode('utf-8'),
+                               comments=push.tip.description.encode('utf-8'),
+                               when=when,
+                               branch=branch)
+            if repo.forest is not None:
+                # locale change
+                c.locale = locale
+            self.parent.addChange(c)
 
         def replay(self, builder, startPush=None, startTime=None, endTime=None):
             bm = self.parent.parent.botmaster
