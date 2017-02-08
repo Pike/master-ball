@@ -45,14 +45,6 @@ class Factory(factory.BuildFactory):
                                                       '/%%(%s_branch)s' % mod),
                             'haltOnFailure': True})
             for mod in revs)
-        idSteps = tuple(
-            (SetProperty, {'command': 
-                           ['hg', 'ident', '-i', '-r', '.'],
-                            'workdir': WithProperties(self.base + 
-                                                      '/%%(%s_branch)s' % mod),
-                           'haltOnFailure': True,
-                           'property': '%s_revision' % mod})
-            for mod in revs)
         l10nSteps = (
             (ShellCommand, {'command': 
                             ['hg', 'update', '-C', '-r', 
@@ -60,12 +52,6 @@ class Factory(factory.BuildFactory):
                             'workdir': WithProperties(self.base + 
                                                       '/%(l10n_branch)s/%(locale)s'),
                             'haltOnFailure': True}),
-            (SetProperty, {'command': 
-                           ['hg', 'ident', '-i', '-r', '.'],
-                            'workdir': WithProperties(self.base + 
-                                                      '/%(l10n_branch)s/%(locale)s'),
-                           'haltOnFailure': True,
-                           'property': 'l10n_revision'}),
             )
         inspectSteps = (
             (InspectLocale, {
@@ -78,7 +64,7 @@ class Factory(factory.BuildFactory):
                     'tree': tree,
                     'gather_stats': True,
                     }),)
-        return sourceSteps + idSteps + l10nSteps + inspectSteps
+        return sourceSteps + l10nSteps + inspectSteps
 
 
 class DirFactory(Factory):

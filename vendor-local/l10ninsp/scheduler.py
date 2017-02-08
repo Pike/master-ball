@@ -340,23 +340,23 @@ class AppScheduler(BaseUpstreamScheduler):
             for k, v in _t.branches.iteritems():
                 props.setProperty(k+"_branch", v, "Scheduler")
                 _r = "default"
+                if k == 'l10n':
+                    repo = '%s/%s' % (v, locale)
+                else:
+                    repo = v
+                q = Push.objects.filter(repository__name=repo,
+                                        changesets__branch__name='default')
                 if when is not None:
-                    if k == 'l10n':
-                        repo = '%s/%s' % (v, locale)
-                    else:
-                        repo = v
-                    q = Push.objects.filter(repository__name=repo,
-                                            push_date__lte=when,
-                                            changesets__branch__name='default')
-                    try:
-                        # get the latest changeset on the 'default' branch
-                        #  not strictly .tip, for pushes with heads on
-                        #  multiple branches (bug 602182)
-                        _c = q.order_by('-pk')[0].changesets.order_by('-pk')
-                        _r = str(_c.filter(branch__name='default')[0].shortrev)
-                    except IndexError:
-                        # no pushes, update to empty repo 000000000000
-                        _r = "default"
+                    q = q.filter(push_date__lte=when)
+                try:
+                    # get the latest changeset on the 'default' branch
+                    #  not strictly .tip, for pushes with heads on
+                    #  multiple branches (bug 602182)
+                    _c = q.order_by('-pk')[0].changesets.order_by('-pk')
+                    _r = str(_c.filter(branch__name='default')[0].revision)
+                except IndexError:
+                    # no pushes, update to empty repo 000000000000
+                    _r = "000000000000"
                 props.setProperty(k+"_revision", _r, "Scheduler")
             props.update({"tree": tree,
                           "locale": locale,
