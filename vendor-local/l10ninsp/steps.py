@@ -417,6 +417,7 @@ class TreeLoader(BuildStep):
                      'Loading l10n.inis for %s, alllocales: %s' %
                      (self.rendered_tree, alllocales))
         self.loadIni(repo, branch, path, alllocales)
+        self.endLoad()
 
     def loadIni(self, repo, branch, path, alllocales="no"):
         url = repo + '/' + branch + '/raw-file/default/' + path
@@ -493,7 +494,6 @@ class TreeLoader(BuildStep):
                 self.allLocalesLoaded(content)
         except NoSectionError:
             pass
-        self.endLoad()
 
     def onL10niniFail(self, failure):
         self.pending -= 1
