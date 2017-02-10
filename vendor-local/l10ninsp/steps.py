@@ -20,6 +20,7 @@ except:
     import simplejson as json
 from ConfigParser import ConfigParser, NoSectionError, NoOptionError
 from cStringIO import StringIO
+import urllib2
 
 from bb2mbdb.utils import timeHelper
 
@@ -423,9 +424,8 @@ class TreeLoader(BuildStep):
         self.step_status.setText(['loading', 'l10n.ini'])
         self.step_status.setText2([repo, branch, path])
         self.pending += 1
-        d = getPage(url)
-        d.addCallbacks(self.onL10niniLoad, self.onL10niniFail,
-                       callbackArgs=[repo, branch, path, alllocales])
+        inicontent = urllib2.urlopen(url).read()
+        self.onL10niniLoad(inicontent, repo, branch, path, alllocales)
 
     def onL10niniLoad(self, inicontent, repo, branch, path, alllocales):
         self.pending -= 1
@@ -489,9 +489,8 @@ class TreeLoader(BuildStep):
                              'loading all-locales for %s from %s' % 
                              (self.tree.name, allpath))
                 self.pending += 1
-                d = getPage(repo + '/' + branch + '/raw-file/default/' + allpath)
-                d.addCallbacks(self.allLocalesLoaded,
-                               self.allLocalesFailed)
+                content = urllib2.urlopen(repo + '/' + branch + '/raw-file/default/' + allpath).read()
+                self.allLocalesLoaded(content)
         except NoSectionError:
             pass
         self.endLoad()
@@ -514,7 +513,6 @@ class TreeLoader(BuildStep):
         logger.debug('scheduler.l10n.tree',
                      'all-locales loaded, found %s' %
                      str(locales))
-        self.endLoad()
 
     def allLocalesFailed(self, page):
         self.pending -= 1
