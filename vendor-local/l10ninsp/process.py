@@ -16,8 +16,9 @@ from steps import InspectLocale, InspectLocaleDirs, GetRevisions
 class Factory(factory.BuildFactory):
     useProgress = False
     
-    def __init__(self, basedir, mastername, steps=None):
+    def __init__(self, basedir, mastername, steps=None, hg_shares=None):
         factory.BuildFactory.__init__(self, steps)
+        self.hg_shares = hg_shares
         self.base = basedir
         self.mastername = mastername
 
@@ -37,26 +38,64 @@ class Factory(factory.BuildFactory):
             revs = revs[:]
         revs.remove('l10n')
         tree = request.properties.getProperty('tree')
+        hg_workdir = self.base
+        shareSteps = tuple()
+        hg = ['hg']
+        if self.hg_shares is not None:
+            hg_workdir = self.hg_shares
+            hg += ['--config', 'extensions.share=']
+            shareSteps = tuple(
+                (ShellCommand, {
+                    'command': [
+                        'mkdir', '-p', WithProperties('%%(%s_branch)s' % mod)],
+                    'workdir': hg_workdir
+                })
+                for mod in revs) + tuple(
+                (ShellCommand, {
+                    'command': hg + [
+                        'share', '-U',
+                        WithProperties(self.base + '/%%(%s_branch)s' % mod),
+                        WithProperties('%%(%s_branch)s' % mod)],
+                    'workdir': hg_workdir,
+                    'flunkOnFailure': False
+                })
+                for mod in revs) + tuple(
+                (ShellCommand, {
+                    'command': [
+                        'mkdir', '-p',
+                        WithProperties('%(l10n_branch)s/%(locale)s')],
+                    'workdir': hg_workdir
+                })
+                for mod in revs) + (
+                (ShellCommand, {
+                    'command': hg + [
+                        'share', '-U',
+                        WithProperties(self.base +
+                                       '/%(l10n_branch)s/%(locale)s'),
+                        WithProperties('%(l10n_branch)s/%(locale)s')],
+                    'workdir': hg_workdir,
+                    'flunkOnFailure': False
+                }),)
         sourceSteps = tuple(
             (ShellCommand, {'command': 
-                            ['hg', 'update', '-C', '-r', 
+                            hg + ['update', '-C', '-r',
                              WithProperties('%%(%s_revision)s' % mod)],
-                            'workdir': WithProperties(self.base + 
+                            'workdir': WithProperties(hg_workdir +
                                                       '/%%(%s_branch)s' % mod),
                             'haltOnFailure': True})
             for mod in revs)
         l10nSteps = (
             (ShellCommand, {'command': 
-                            ['hg', 'update', '-C', '-r', 
+                            hg + ['update', '-C', '-r',
                              WithProperties('%(l10n_revision)s')],
-                            'workdir': WithProperties(self.base + 
+                            'workdir': WithProperties(hg_workdir +
                                                       '/%(l10n_branch)s/%(locale)s'),
                             'haltOnFailure': True}),
             )
         inspectSteps = (
             (InspectLocale, {
                     'master': self.mastername,
-                    'workdir': self.base,
+                    'workdir': hg_workdir,
                     'basedir': WithProperties('%(en_branch)s'),
                     'inipath': WithProperties('%(en_branch)s/%(l10n.ini)s'),
                     'l10nbase': WithProperties('%(l10n_branch)s'),
@@ -64,7 +103,7 @@ class Factory(factory.BuildFactory):
                     'tree': tree,
                     'gather_stats': True,
                     }),)
-        return sourceSteps + l10nSteps + inspectSteps
+        return shareSteps + sourceSteps + l10nSteps + inspectSteps
 
 
 class DirFactory(Factory):
