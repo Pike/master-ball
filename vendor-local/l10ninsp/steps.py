@@ -390,6 +390,10 @@ class TreeLoader(BuildStep):
         self.treename = treename
         self.l10nbuilds = l10nbuilds
         self.cb = cb
+        self.timeout = 5
+        self.headers = {
+            'User-Agent': 'Elmo/1.0 (l10n.mozilla.org)'
+        }
 
     def start(self):
         from scheduler import Tree
@@ -425,7 +429,8 @@ class TreeLoader(BuildStep):
         self.step_status.setText(['loading', 'l10n.ini'])
         self.step_status.setText2([repo, branch, path])
         self.pending += 1
-        inicontent = urllib2.urlopen(url).read()
+        request = urllib2.Request(url, headers=self.headers)
+        inicontent = urllib2.urlopen(request, timeout=self.timeout).read()
         self.onL10niniLoad(inicontent, repo, branch, path, alllocales)
 
     def onL10niniLoad(self, inicontent, repo, branch, path, alllocales):
@@ -490,7 +495,10 @@ class TreeLoader(BuildStep):
                              'loading all-locales for %s from %s' % 
                              (self.tree.name, allpath))
                 self.pending += 1
-                content = urllib2.urlopen(repo + '/' + branch + '/raw-file/default/' + allpath).read()
+                request = urllib2.Request(
+                    repo + '/' + branch + '/raw-file/default/' + allpath,
+                    headers=self.headers)
+                content = urllib2.urlopen(request, timeout=self.timeout).read()
                 self.allLocalesLoaded(content)
         except NoSectionError:
             pass
