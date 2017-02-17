@@ -42,16 +42,13 @@ class ResultRemoteCommand(LoggedRemoteCommand):
         if self.dbrun is not None:
             return
         from l10nstats.models import Run, Build
-        from life.models import Tree, Forest, Locale
-        loc, isnew = Locale.objects.get_or_create(code=self.args['locale'])
-        forest, isnew = Forest.objects.get_or_create(name=self.step.build.getProperty('l10n_branch'))
-        if isnew:
-            log.msg(("WARNING: Forest %s created in status, not expected " +
-                     "outside of tests") % forest.name)
-        tree, isnew = Tree.objects.get_or_create(code=self.args['tree'],
-                                                 l10n=forest)
+        from life.models import Tree, Locale
+        tree = Tree.objects.get(code=self.args['tree'])
+        loc = Locale.objects.get(code=self.args['locale'])
         buildername = self.step.build.getProperty('buildername')
         buildnumber = self.step.build.getProperty('buildnumber')
+        srctime = self.step.build.getProperty('srctime')
+        log.msg('srctime is %s' % str(srctime))
         try:
             build = Build.objects.get(builder__master__name = self.step.master,
                                       builder__name = buildername,
@@ -64,12 +61,8 @@ class ResultRemoteCommand(LoggedRemoteCommand):
         self.dbrun.activate()
         from life.models import Changeset, Push
         revs = self.step.build.getProperty('revisions')
-        srctime = None
         for rev in revs:
             branch = self.step.build.getProperty('%s_branch' % rev)
-            if rev == 'l10n':
-                # l10n repo, append locale to branch
-                branch += '/' + loc.code
             ident = self.step.build.getProperty('%s_revision' % rev)
             cs = None
             try:
@@ -78,17 +71,6 @@ class ResultRemoteCommand(LoggedRemoteCommand):
             except (Changeset.DoesNotExist, Changeset.MultipleObjectsReturned):
                 log.msg("no changeset found for %s=%s" % (rev, ident))
                 pass
-            if cs is not None and cs.id is not 1:
-                try:
-                    _st = Push.objects.filter(repository__name=branch,
-                                              changesets=cs).order_by('push_date')[0].push_date
-                    if srctime is None:
-                        srctime = _st
-                    else:
-                        srctime = max(srctime, _st)
-                except (Push.DoesNotExist, IndexError):
-                    log.msg("no srctime found for %s=%s" % (rev, ident))
-                    pass
         if srctime is not None:
             self.dbrun.srctime = srctime
             self.dbrun.save()
@@ -200,7 +182,7 @@ class InspectLocale(LoggingBuildStep):
     description = ["comparing"]
     descriptionDone = ["compare", "locales"]
 
-    def __init__(self, master, workdir, basedir, inipath, l10nbase, locale, tree,
+    def __init__(self, master, workdir, inipath, l10nbase, locale, tree,
                  gather_stats = False, initial_module=None, **kwargs):
         """
         @type  master: string
@@ -209,9 +191,6 @@ class InspectLocale(LoggingBuildStep):
         @type  workdir: string
         @param workdir: local directory (relative to the Builder's root)
                         where the mozilla and the l10n trees reside
-
-        @type basedir: string
-        @param basdir: path to all local repository clones, relative to the workdir
 
         @type inipath: string
         @param inipath: path to the l10n.ini file, relative to the workdir
@@ -232,7 +211,6 @@ class InspectLocale(LoggingBuildStep):
         LoggingBuildStep.__init__(self, **kwargs)
 
         self.args = {'workdir'    : workdir,
-                     'basedir'    : basedir,
                      'inipath'    : inipath,
                      'l10nbase'   : l10nbase,
                      'locale'     : locale,

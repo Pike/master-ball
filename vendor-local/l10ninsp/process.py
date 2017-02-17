@@ -36,7 +36,6 @@ class Factory(factory.BuildFactory):
             log.msg('no revisions given in ' + str(request.properties))
         else:
             revs = revs[:]
-        revs.remove('l10n')
         tree = request.properties.getProperty('tree')
         hg_workdir = self.base
         shareSteps = tuple()
@@ -59,23 +58,7 @@ class Factory(factory.BuildFactory):
                     'workdir': hg_workdir,
                     'flunkOnFailure': False
                 })
-                for mod in revs) + tuple(
-                (ShellCommand, {
-                    'command': [
-                        'mkdir', '-p',
-                        WithProperties('%(l10n_branch)s/%(locale)s')],
-                    'workdir': hg_workdir
-                })
-                for mod in revs) + (
-                (ShellCommand, {
-                    'command': hg + [
-                        'share', '-U',
-                        WithProperties(self.base +
-                                       '/%(l10n_branch)s/%(locale)s'),
-                        WithProperties('%(l10n_branch)s/%(locale)s')],
-                    'workdir': hg_workdir,
-                    'flunkOnFailure': False
-                }),)
+                for mod in revs)
         sourceSteps = tuple(
             (ShellCommand, {'command': 
                             hg + ['update', '-C', '-r',
@@ -84,26 +67,17 @@ class Factory(factory.BuildFactory):
                                                       '/%%(%s_branch)s' % mod),
                             'haltOnFailure': True})
             for mod in revs)
-        l10nSteps = (
-            (ShellCommand, {'command': 
-                            hg + ['update', '-C', '-r',
-                             WithProperties('%(l10n_revision)s')],
-                            'workdir': WithProperties(hg_workdir +
-                                                      '/%(l10n_branch)s/%(locale)s'),
-                            'haltOnFailure': True}),
-            )
         inspectSteps = (
             (InspectLocale, {
                     'master': self.mastername,
                     'workdir': hg_workdir,
-                    'basedir': WithProperties('%(en_branch)s'),
-                    'inipath': WithProperties('%(en_branch)s/%(l10n.ini)s'),
-                    'l10nbase': WithProperties('%(l10n_branch)s'),
+                    'inipath': WithProperties('%(inipath)s'),
+                    'l10nbase': WithProperties('%(l10nbase)s'),
                     'locale': WithProperties('%(locale)s'),
                     'tree': tree,
                     'gather_stats': True,
                     }),)
-        return shareSteps + sourceSteps + l10nSteps + inspectSteps
+        return shareSteps + sourceSteps + inspectSteps
 
 
 class DirFactory(Factory):

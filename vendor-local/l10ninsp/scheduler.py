@@ -15,6 +15,8 @@ from collections import defaultdict
 from datetime import datetime
 import os.path
 from ConfigParser import ConfigParser, NoSectionError, NoOptionError
+from life.models import Tree as ElmoTree, Locale, Repository, Forest, Push
+from l10nstats.models import Run
 
 import logger, util
 
@@ -132,6 +134,17 @@ class AppScheduler(BaseUpstreamScheduler):
             # updated tree. Add this to treesToDo, which will be picked up
             # by checkEnUS, called after the buildset is done
             self.treesToDo.add(tree.name)
+        # tree is new or changed, update django database
+        forest, isnew = Forest.objects.get_or_create(name=tree.branches['l10n'])
+        if isnew:
+            log.msg("WARNING: scheduler created forest %s, not expected" %
+                    forest.name)
+        tree_, isnew = ElmoTree.objects.get_or_create(code=tree.name)
+        if tree_.l10n != forest:
+            tree_.l10n = forest
+            tree_.save()
+            log.msg("scheduler updated %s.l10n to %s" %
+                    (tree_.code, forest.name))
         self.trees[tree.name] = tree
         logger.debug("scheduler.l10n", "updated tree " + tree.name)
         try:
@@ -195,6 +208,8 @@ class AppScheduler(BaseUpstreamScheduler):
                      'pending trees got built' + (change is not None and ", change given" or ""))
         # trees for the last change are built, wait no longer
         self.waitOnTree = None
+        log.msg("self.branches: %s" % str(self.branches))
+        log.msg("self.l10nbranches: %s" % str(self.l10nbranches))
         if change is not None and branchdata is not None:
             self.checkEnUS(res, branchdata, change)
         while self.waitOnTree is None and self.pendingChanges:
@@ -205,6 +220,7 @@ class AppScheduler(BaseUpstreamScheduler):
         '''Main entry point for the scheduler, this is called by the 
         buildmaster.
         '''
+        log.msg("addChange appscheduler, %s" % str(self.waitOnTree))
         if self.waitOnTree is not None:
             # a tree build is currently running, wait with this
             # until we're done with it
@@ -334,17 +350,16 @@ class AppScheduler(BaseUpstreamScheduler):
             # figure out the latest change
             try:
                 when = timeHelper(max(filter(None, (c.when for c in changes))))
-                from life.models import Push
             except (ValueError, ImportError):
                 when = None
             for k, v in _t.branches.iteritems():
-                props.setProperty(k+"_branch", v, "Scheduler")
-                _r = "default"
+                _r = "000000000000"
                 if k == 'l10n':
                     repo = '%s/%s' % (v, locale)
                 else:
                     repo = v
-                q = Push.objects.filter(repository__name=repo,
+                repo = Repository.objects.get(name=repo)
+                q = Push.objects.filter(repository=repo,
                                         changesets__branch__name='default')
                 if when is not None:
                     q = q.filter(push_date__lte=when)
@@ -352,15 +367,30 @@ class AppScheduler(BaseUpstreamScheduler):
                     # get the latest changeset on the 'default' branch
                     #  not strictly .tip, for pushes with heads on
                     #  multiple branches (bug 602182)
-                    _c = q.order_by('-pk')[0].changesets.order_by('-pk')
+                    _p = q.order_by('-pk')[0]
+                    if _p.push_date:
+                        if not when:
+                            when = _p.push_date
+                        else:
+                            when = max(when, _p.push_date)
+                    _c = _p.changesets.order_by('-pk')
                     _r = str(_c.filter(branch__name='default')[0].revision)
                 except IndexError:
                     # no pushes, update to empty repo 000000000000
                     _r = "000000000000"
+                props.setProperty(k+"_branch", repo.name,
+                                  "Scheduler")
                 props.setProperty(k+"_revision", _r, "Scheduler")
+            _f = Forest.objects.get(name=_t.branches['l10n'])
+            # use the relative path of the en repo we got above
+            inipath = '{}/{}'.format(
+                props['en_branch'],
+                _t.l10ninis[_t.branches['en']][0])
             props.update({"tree": tree,
+                          "l10nbase": _f.name,
                           "locale": locale,
-                          "l10n.ini": _t.l10ninis[_t.branches['en']][0],
+                          "inipath": inipath,
+                          "srctime": when,
                           "revisions": sorted(_t.branches.keys()),
                           },
                          "Scheduler")
