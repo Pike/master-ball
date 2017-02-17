@@ -378,7 +378,7 @@ class AppScheduler(BaseUpstreamScheduler):
                 except IndexError:
                     # no pushes, update to empty repo 000000000000
                     _r = "000000000000"
-                props.setProperty(k+"_branch", repo.name,
+                props.setProperty(k+"_branch", repo.relative_path(),
                                   "Scheduler")
                 props.setProperty(k+"_revision", _r, "Scheduler")
             _f = Forest.objects.get(name=_t.branches['l10n'])
@@ -387,7 +387,7 @@ class AppScheduler(BaseUpstreamScheduler):
                 props['en_branch'],
                 _t.l10ninis[_t.branches['en']][0])
             props.update({"tree": tree,
-                          "l10nbase": _f.name,
+                          "l10nbase": _f.relative_path(),
                           "locale": locale,
                           "inipath": inipath,
                           "srctime": when,
