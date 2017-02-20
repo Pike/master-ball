@@ -22,36 +22,40 @@ def createChangeSource(pollInterval=3*60):
             self.latest = None
             self.branch, created = \
                 Branch.objects.get_or_create(name=branch)
-        
+
         def startService(self):
             self.loop = LoopingCall(self.poll)
             base.ChangeSource.startService(self)
             reactor.callLater(0, self.loop.start, self.pollInterval)
-        
+
         def stopService(self):
             self.loop.stop()
             return base.ChangeSource.stopService(self)
 
-        @transaction.atomic
         def poll(self):
             '''Check for new pushes.
             '''
             import django.db.utils
             try:
-                if self.latest is None:
-                    try:
-                        self.latest = Push.objects.order_by('-pk')[0].id
-                    except IndexError:
-                        self.latest = 0
-                    return
-                new_pushes = Push.objects.filter(pk__gt=self.latest).order_by('pk')
-                if self.debug:
-                    log.msg('mbdb changesource found %d pushes after %d' % (new_pushes.count(), self.latest))
-                push = None
-                for push in new_pushes:
-                    self.submitChangesForPush(push)
-                if push is not None:
-                    self.latest = push.id
+                with transaction.atomic():
+                    if self.latest is None:
+                        try:
+                            self.latest = Push.objects.order_by('-pk')[0].id
+                        except IndexError:
+                            self.latest = 0
+                        return
+                    new_pushes = (
+                        Push.objects
+                        .filter(pk__gt=self.latest)
+                        .order_by('pk'))
+                    if self.debug:
+                        log.msg('mbdb changesource found %d pushes after %d' %
+                                (new_pushes.count(), self.latest))
+                    push = None
+                    for push in new_pushes:
+                        self.submitChangesForPush(push)
+                    if push is not None:
+                        self.latest = push.id
             except django.db.utils.OperationalError:
                 from django import db
                 django.db.connection.close()
