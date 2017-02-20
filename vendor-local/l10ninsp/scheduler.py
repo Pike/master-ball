@@ -376,8 +376,13 @@ class AppScheduler(BaseUpstreamScheduler):
                     _c = _p.changesets.order_by('-pk')
                     _r = str(_c.filter(branch__name='default')[0].revision)
                 except IndexError:
-                    # no pushes, update to empty repo 000000000000
-                    _r = "000000000000"
+                    # no pushes, try to get a good Changeset.
+                    # this is guaranteed to at least return the null changeset
+                    _r = str(
+                        repo.changesets
+                        .filter(branch__name='default')
+                        .order_by('-pk')
+                        .values_list('revision', flat=True)[0])
                 props.setProperty(k+"_branch", repo.relative_path(),
                                   "Scheduler")
                 props.setProperty(k+"_revision", _r, "Scheduler")
