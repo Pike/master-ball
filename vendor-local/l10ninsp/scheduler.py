@@ -139,7 +139,10 @@ class AppScheduler(BaseUpstreamScheduler):
         if isnew:
             log.msg("WARNING: scheduler created forest %s, not expected" %
                     forest.name)
-        tree_, isnew = ElmoTree.objects.get_or_create(code=tree.name)
+        try:
+            tree_ = ElmoTree.objects.get(code=tree.name)
+        except ElmoTree.DoesNotExist:
+            tree_ = ElmoTree.objects.create(code=tree.name, l10n=forest)
         if tree_.l10n != forest:
             tree_.l10n = forest
             tree_.save()
