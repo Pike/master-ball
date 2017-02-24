@@ -99,17 +99,22 @@ class InspectCommand(Command):
     pass
 
   def _compare(self, workingdir, locale, gather_stats, args):
-    inipath, l10nbase = (self.args[k]
-      for k in ('inipath', 'l10nbase'))
-    app = EnumerateSourceTreeApp(os.path.join(workingdir, inipath),
-                                 workingdir,
-                                 os.path.join(workingdir, l10nbase),
-                                 [locale])
-    obs = None
-    stats = None
-    if gather_stats:
-      obs = Observer()
-    o = compareApp(app, other_observer=obs)
+    inipath, l10nbase, redirects = (self.args[k]
+      for k in ('inipath', 'l10nbase', 'redirects'))
+    try:
+      app = EnumerateSourceTreeApp(os.path.join(workingdir, inipath),
+                                   workingdir,
+                                   os.path.join(workingdir, l10nbase),
+                                   redirects,
+                                   [locale])
+      obs = None
+      stats = None
+      if gather_stats:
+        obs = Observer()
+      o = compareApp(app, other_observer=obs)
+    except Exception as e:
+      log.msg(e)
+      raise
     summary = o.summary[locale]
     if gather_stats:
       stats = obs.dict()

@@ -67,12 +67,17 @@ class Factory(factory.BuildFactory):
                                                       '/%%(%s_branch)s' % mod),
                             'haltOnFailure': True})
             for mod in revs)
+        redirects = {}
+        for key, value, src in request.properties.asList():
+            if key.startswith('local_'):
+                redirects[key[len('local_'):]] = value
         inspectSteps = (
             (InspectLocale, {
                     'master': self.mastername,
                     'workdir': hg_workdir,
                     'inipath': WithProperties('%(inipath)s'),
                     'l10nbase': WithProperties('%(l10nbase)s'),
+                    'redirects': redirects,
                     'locale': WithProperties('%(locale)s'),
                     'tree': tree,
                     'gather_stats': True,

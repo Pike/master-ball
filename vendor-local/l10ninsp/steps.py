@@ -182,7 +182,7 @@ class InspectLocale(LoggingBuildStep):
     description = ["comparing"]
     descriptionDone = ["compare", "locales"]
 
-    def __init__(self, master, workdir, inipath, l10nbase, locale, tree,
+    def __init__(self, master, workdir, inipath, l10nbase, redirects, locale, tree,
                  gather_stats = False, initial_module=None, **kwargs):
         """
         @type  master: string
@@ -213,6 +213,7 @@ class InspectLocale(LoggingBuildStep):
         self.args = {'workdir'    : workdir,
                      'inipath'    : inipath,
                      'l10nbase'   : l10nbase,
+                     'redirects'  : redirects,
                      'locale'     : locale,
                      'tree'       : tree,
                      'gather_stats'     : gather_stats,

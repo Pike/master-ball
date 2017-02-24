@@ -386,8 +386,12 @@ class AppScheduler(BaseUpstreamScheduler):
                         .filter(branch__name='default')
                         .order_by('-pk')
                         .values_list('revision', flat=True)[0])
-                props.setProperty(k+"_branch", repo.relative_path(),
+                relpath = repo.relative_path()
+                props.setProperty(k+"_branch", relpath,
                                   "Scheduler")
+                if relpath != repo.name:
+                    props.setProperty("local_" + repo.name, relpath,
+                                      "Scheduler")
                 props.setProperty(k+"_revision", _r, "Scheduler")
             _f = Forest.objects.get(name=_t.branches['l10n'])
             # use the relative path of the en repo we got above
