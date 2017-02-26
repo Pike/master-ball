@@ -15,6 +15,7 @@ from collections import defaultdict
 from datetime import datetime
 import os.path
 from ConfigParser import ConfigParser, NoSectionError, NoOptionError
+from django.db import connection
 from life.models import Tree as ElmoTree, Locale, Repository, Forest, Push
 from l10nstats.models import Run
 
@@ -25,6 +26,16 @@ def timeHelper(t):
     if t is None:
         return t
     return datetime.utcfromtimestamp(t)
+
+
+def try_log(f):
+    def wrapped(*args, **kwargs):
+        try:
+            f(*args, **kwargs)
+        except Exception as e:
+            log.msg(e)
+            raise
+    return wrapped
 
 
 class Tree(ComparableMixin):
@@ -233,6 +244,7 @@ class AppScheduler(BaseUpstreamScheduler):
         if not hasattr(change, 'locale') or not change.locale:
             if 'locale' in change.properties:
                 change.locale = change.properties['locale']
+        log.msg("locale: %s" % getattr(change, 'locale', 'none'))
         if not hasattr(change, 'locale') or not change.locale:
             # check branch, l10n.inis
             # if l10n.inis are found, callback to all-locales, locales/en-US
@@ -271,9 +283,11 @@ class AppScheduler(BaseUpstreamScheduler):
             self.checkEnUS(None, branchdata, change)
             return
         # check l10n changesets
+        log.msg('my branch: %s, in? %s' % (change.branch, ','.join(sorted(self.l10nbranches.keys()))))
         if change.branch not in self.l10nbranches:
             return
         l10ndirs = self.l10nbranches[change.branch]
+        log.msg('yes, dirs: %s' % ','.join(sorted(l10ndirs)))
         trees = set()
         for f in change.files:
             for mod, _trees in l10ndirs.iteritems():
@@ -282,6 +296,11 @@ class AppScheduler(BaseUpstreamScheduler):
         for _n in trees:
             if change.locale in self.trees[_n].locales:
                 self.compareBuild(_n, change.locale, [change])
+            else:
+                log.msg('%s not in tree %s, needs %s' % (
+                    change.locale,
+                    _n,
+                    ','.join(sorted(self.trees[_n].locales))))
         return
 
     def checkEnUS(self, result, branchdata, change):
@@ -345,7 +364,10 @@ class AppScheduler(BaseUpstreamScheduler):
         if self.dSubmitBuildsets is None:
             self.dSubmitBuildsets = reactor.callLater(0, self.submitBuildsets)
 
+    @try_log
     def submitBuildsets(self):
+        connection.close_if_unusable_or_obsolete()
+        log.msg('submitting %d pending buildsets' % len(self.pendings))
         for tpl, changes in self.pendings.iteritems():
             tree, locale = tpl
             _t = self.trees[tree]
@@ -355,13 +377,19 @@ class AppScheduler(BaseUpstreamScheduler):
                 when = timeHelper(max(filter(None, (c.when for c in changes))))
             except (ValueError, ImportError):
                 when = None
+            revisions = sorted(_t.branches.keys())
             for k, v in _t.branches.iteritems():
                 _r = "000000000000"
                 if k == 'l10n':
                     repo = '%s/%s' % (v, locale)
                 else:
                     repo = v
-                repo = Repository.objects.get(name=repo)
+                try:
+                    repo = Repository.objects.get(name=repo)
+                except Repository.DoesNotExist:
+                    log.msg('Repository %s does not exist, skipping' % repo)
+                    revisions.remove(k)
+                    continue
                 q = Push.objects.filter(repository=repo,
                                         changesets__branch__name='default')
                 if when is not None:
@@ -403,13 +431,14 @@ class AppScheduler(BaseUpstreamScheduler):
                           "locale": locale,
                           "inipath": inipath,
                           "srctime": when,
-                          "revisions": sorted(_t.branches.keys()),
+                          "revisions": revisions,
                           },
                          "Scheduler")
             bs = buildset.BuildSet(self.builderNames,
                                    SourceStamp(changes=changes),
                                    properties=props)
             self.submitBuildSet(bs)
+            log.msg('one buildset successfully submitted')
         self.dSubmitBuildsets = None
         self.pendings.clear()
         
