@@ -6,7 +6,6 @@ import warnings
 
 from twisted.python import log
 from twisted.internet import reactor
-from twisted.web.client import getPage
 from buildbot.process.buildstep import BuildStep, LoggingBuildStep, LoggedRemoteCommand
 from buildbot.status.builder import SUCCESS, WARNINGS, FAILURE, SKIPPED, \
     Results

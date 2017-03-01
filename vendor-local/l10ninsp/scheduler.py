@@ -9,12 +9,12 @@ from buildbot import buildset
 from buildbot.process import properties
 from buildbot.util import ComparableMixin
 from twisted.internet import defer, reactor
-from twisted.web.client import getPage
 
 from collections import defaultdict
 from datetime import datetime
 import os.path
 from ConfigParser import ConfigParser, NoSectionError, NoOptionError
+import urllib2
 from django.db import connection
 from life.models import Tree as ElmoTree, Locale, Repository, Forest, Push
 from l10nstats.models import Run
@@ -127,6 +127,10 @@ class AppScheduler(BaseUpstreamScheduler):
         self.waitOnTree = None
         self.pendingChanges = []
         self.treesToDo = set() # trees that changed on a tree build
+        self.timeout = 5
+        self.headers = {
+            'User-Agent': 'Elmo/1.0 (l10n.mozilla.org)'
+        }
 
     def listBuilderNames(self):
         return self.builderNames + [self.treebuilder]
@@ -337,8 +341,9 @@ class AppScheduler(BaseUpstreamScheduler):
             _t = self.trees[_n]
             url = _t.repo + '/' + _t.branches['en'] + '/raw-file/' + rev
             url += '/' + _t.all_locales
-            d = getPage(url)
-            d.addCallback(self.onAllLocales, _n, change)
+            request = urllib2.Request(url, headers=self.headers)
+            page = urllib2.urlopen(request, timeout=self.timeout).read()
+            self.onAllLocales(page, _n, change)
         # trigger all locales for all trees
         for _n in en_US:
             _t = self.trees[_n]
@@ -460,9 +465,15 @@ class DirScheduler(BaseUpstreamScheduler):
         self.builderNames = builderNames
         self.repourl = repourl
         self.locales = locales
+        self.timeout = 5
+        self.headers = {
+            'User-Agent': 'Elmo/1.0 (l10n.mozilla.org)'
+        }
 
     def getPage(self, url):
-        return getPage(url)
+        request = urllib2.Request(url, headers=self.headers)
+        page = urllib2.urlopen(request, timeout=self.timeout).read()
+        return defer.succeed(page)
 
     # Internal helper
     def queueBuild(self, locale, change):
