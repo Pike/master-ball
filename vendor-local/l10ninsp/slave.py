@@ -44,7 +44,7 @@ class InspectCommand(Command):
   from the slave's buildbot.tac
   """
   
-  debug = True
+  # debug = True
   
   def setup(self, args):
     self.args = args.copy()
