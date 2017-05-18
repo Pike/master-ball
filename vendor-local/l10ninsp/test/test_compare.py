@@ -9,7 +9,7 @@ import sys, time, os
 from twisted.trial import unittest
 from twisted.internet import reactor, defer
 from twisted.python import util, log
-from l10ninsp.slave import InspectCommand, InspectDirsCommand
+from l10ninsp.slave import InspectCommand
 from buildbot import interfaces
 from buildbot.process.base import BuildRequest
 from buildbot.sourcestamp import SourceStamp
@@ -223,37 +223,4 @@ dirs = embedding/android
                       0,
                       None,
                       dict(warnings=1, completion=100, total=3))
-        return d
-
-
-class SlaveSideDirectory(SlaveMixin, unittest.TestCase):
-    #old_name = settings.DATABASE_NAME
-    basedir = "test_compare.testSuccess"
-    stageFiles = ((('dir', 'good', 'app', 'file.properties'),
-        '''
-entry = localized value
-monty = locother value
-'''.encode('utf-8')),
-        (('dir', 'en-US', 'app', 'file.properties'),
-        '''
-entry = English value
-monty = Another English value
-'''.encode('utf-8')))
-
-    def args(self, locale, gather_stats=False, initial_module=None):
-        return {'workdir': 'dir',
-                'refpath': 'en-US',
-                'l10npath': locale,
-                'locale': locale,
-                'tree': 'dir-compare',
-                'gather_stats': gather_stats
-                }
-
-    def testGood(self):
-        args = self.args('good')
-        d = self.startCommand(InspectDirsCommand, args)
-        d.addCallback(self._check,
-                      0,
-                      dict(),
-                      dict(completion=100))
         return d

@@ -8,9 +8,7 @@ from buildbot.process.properties import WithProperties
 
 from twisted.python import log, failure
 
-import l10ninsp.steps
-reload(l10ninsp.steps)
-from steps import InspectLocale, InspectLocaleDirs, GetRevisions
+from l10ninsp.steps import InspectLocale
 
 
 class Factory(factory.BuildFactory):
@@ -83,51 +81,3 @@ class Factory(factory.BuildFactory):
                     'gather_stats': True,
                     }),)
         return shareSteps + sourceSteps + inspectSteps
-
-
-class DirFactory(Factory):
-    """Factory used for projects like weave.
-    """
-    def createSteps(self, request):
-        revs = ['en', 'l10n']
-        request.properties.update({'revisions': revs}, 'Factory')
-        tree = request.properties.getProperty('tree')
-        preSteps = ((GetRevisions, {}),)
-        sourceSteps = (
-            (ShellCommand, {'command': 
-                            ['hg', 'update', '-C', '-r', 
-                             WithProperties('%(en_revision)s')],
-                            'workdir': WithProperties(self.base + 
-                                                      '/%(en_branch)s'),
-                            'haltOnFailure': True}),
-            (ShellCommand, {'command': 
-                            ['hg', 'update', '-C', '-r', 
-                             WithProperties('%(l10n_revision)s')],
-                            'workdir': WithProperties(self.base + 
-                                                      '/%(l10n_branch)s/%(locale)s'),
-                            'haltOnFailure': True}),
-            (SetProperty, {'command': 
-                           ['hg', '-R', '.', 'id', '--id', '--rev', '.'], 
-                            'workdir': WithProperties(self.base + 
-                                                      '/%(en_branch)s'),
-                           'haltOnFailure': True,
-                           'property': 'en_revision' }),
-            (SetProperty, {'command': 
-                           ['hg', '-R', '.', 'id', '--id', '--rev', '.'], 
-                            'workdir': WithProperties(self.base + 
-                                                      '/%(l10n_branch)s/%(locale)s'),
-                           'haltOnFailure': True,
-                           'property': 'l10n_revision' }),
-            )
-        inspectSteps = (
-            (InspectLocaleDirs, {
-                    'master': self.mastername,
-                    'workdir': self.base,
-                    'basedir': WithProperties('%(en_branch)s'),
-                    'refpath': WithProperties('%(refpath)s'),
-                    'l10npath': WithProperties('%(l10npath)s'),
-                    'locale': WithProperties('%(locale)s'),
-                    'tree': tree,
-                    'gather_stats': True,
-                    }),)
-        return preSteps + sourceSteps + inspectSteps

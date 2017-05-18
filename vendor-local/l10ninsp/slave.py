@@ -14,7 +14,7 @@ import codecs
 from collections import defaultdict
 import os
 from compare_locales.paths import EnumerateSourceTreeApp
-from compare_locales.compare import compareApp, compareDirs
+from compare_locales.compare import compareApp
 
 class intdict(defaultdict):
     def __init__(self):
@@ -128,34 +128,5 @@ class InspectCommand(Command):
       rc = FAILURE
     self.sendStatus({'rc': rc})
 
-class InspectDirsCommand(InspectCommand):
-  """Subclass InspectCommand to only compare two directories.
-
-  This is used by the InspectLocaleDirs command, as part of the 
-  dashboard for weave.
-
-  Requires `refpath` and `l10npath` to be in args, both are relative
-  to `workingdir`.
-  """
-  def _compare(self, workingdir, locale, gather_stats, args):
-    """Overload _compare to call compareDirs."""
-    ref, l10n = (self.args[k] for k in ('refpath', 'l10npath'))
-    obs = stats = None
-    if gather_stats:
-      obs = Observer()
-    log.msg(workingdir, ref, l10n)
-    o = compareDirs(os.path.join(workingdir, ref),
-                    os.path.join(workingdir, l10n),
-                    other_observer = obs)
-    try:
-        summary = o.summary.values()[0]
-    except:
-        log.msg("Couldn't get summary")
-        summary = {}
-    if gather_stats:
-      stats = obs.dict()
-    return o, summary, stats
-
 
 registerSlaveCommand('moz_inspectlocales', InspectCommand, '0.2')
-registerSlaveCommand('moz_inspectlocales_dirs', InspectDirsCommand, '0.2')

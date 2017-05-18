@@ -258,55 +258,6 @@ class InspectLocale(LoggingBuildStep):
         return LoggingBuildStep.getText(self,cmd,results) + text
 
 
-class InspectLocaleDirs(InspectLocale):
-    """Subclass InspectLocale to only compare two directories.
-
-    This is used for the dashboard for weave.
-    """
-    name = "moz_inspectlocales_dirs"
-    cmd_name = name
-    def __init__(self, master, workdir, basedir, refpath, l10npath, locale,
-                 tree, gather_stats = False, **kwargs):
-        """
-        @type  master: string
-        @param master: name of the master
-
-        @type  workdir: string
-        @param workdir: local directory (relative to the Builder's root)
-                        where the mozilla and the l10n trees reside
-
-        @type basedir: string
-        @param basdir: path to all local repository clones, relative to the workdir
-
-        @type refpath: string
-        @param refpath: path to the reference dir, relative to the workdir
-
-        @type l10npath: string
-        @param l10npath: path to the reference dir, relative to the workdir
-
-        @type  locale: string
-        @param locale: Language code of the localization to be compared.
-
-        @type  tree: string
-        @param tree: The tree identifier for this branch.
-
-        @type gather_stats: bool
-        @param gather_stats: whether or not to gather stats about untranslated strings.
-        """
-
-        LoggingBuildStep.__init__(self, **kwargs)
-
-        self.args = {'workdir'    : workdir,
-                     'basedir'    : basedir,
-                     'refpath'    : refpath,
-                     'l10npath'   : l10npath,
-                     'locale'     : locale,
-                     'tree'       : tree,
-                     'gather_stats'     : gather_stats,
-                     }
-        self.master = master
-
-
 class GetRevisions(BuildStep):
     name = "moz_get_revs"
     warnOnFailure = 1
