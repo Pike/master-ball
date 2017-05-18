@@ -78,6 +78,5 @@ class Factory(factory.BuildFactory):
                     'redirects': redirects,
                     'locale': WithProperties('%(locale)s'),
                     'tree': tree,
-                    'gather_stats': True,
                     }),)
         return shareSteps + sourceSteps + inspectSteps

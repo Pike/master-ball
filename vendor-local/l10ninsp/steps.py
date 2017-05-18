@@ -12,11 +12,7 @@ from buildbot.status.builder import SUCCESS, WARNINGS, FAILURE, SKIPPED, \
 from buildbot.process.properties import WithProperties
 
 from pprint import pformat
-from collections import defaultdict
-try:
-    import json
-except:
-    import simplejson as json
+import json
 from ConfigParser import ConfigParser, NoSectionError, NoOptionError
 from cStringIO import StringIO
 import urllib2
@@ -87,14 +83,6 @@ class ResultRemoteCommand(LoggedRemoteCommand):
             result = update.pop('result')
         except KeyError:
             pass
-        try:
-            # get the Observer data from the slave
-            stats = update.pop('stats')
-            log.msg('untranslated count: %d' %
-                    sum(map(lambda d: sum(d.values()), stats.values())))
-            self.addStats(stats)
-        except KeyError:
-            pass
         if len(update):
             # there's more than just us
             LoggedRemoteCommand.remoteUpdate(self, update)
@@ -129,32 +117,6 @@ class ResultRemoteCommand(LoggedRemoteCommand):
                       doc_type='comparison', id=self.dbrun.id)
         log.msg('es.index: ' + json.dumps(rv))
 
-    def addStats(self, stats):
-        self.ensureDBRun()
-        id = self.dbrun.id
-        def to_rows():
-            for m, d in stats.iteritems():
-                for f, c in d.iteritems():
-                    yield (m, f, c, id)
-        rows = list(to_rows())
-        modulestats = defaultdict(int)
-        for m, f, c, id in rows:
-            modulestats[m] += c
-        from l10nstats.models import UnchangedInFile, ModuleCount
-        from django.db import connection
-        cur = connection.cursor()
-        cur.executemany("INSERT INTO %s (module, file, count, run_id) VALUES (%%s, %%s, %%s,  %%s)"
-                         % UnchangedInFile._meta.db_table, rows)
-        log.msg("should have inserted %d rows into %s" %
-                (len(rows), UnchangedInFile._meta.db_table))
-        mcs = []
-        for m, c in modulestats.iteritems():
-            mc, created = ModuleCount.objects.get_or_create(name=m, count=c)
-            mcs.append(mc)
-        self.dbrun.unchangedmodules.add(*mcs)
-        self.dbrun.save()
-        pass
-
     def addSummary(self, summary):
         self.ensureDBRun()
         for k in ('missing', 'missingInFiles', 'obsolete', 'total',
@@ -182,7 +144,7 @@ class InspectLocale(LoggingBuildStep):
     descriptionDone = ["compare", "locales"]
 
     def __init__(self, master, workdir, inipath, l10nbase, redirects, locale, tree,
-                 gather_stats = False, initial_module=None, **kwargs):
+                 **kwargs):
         """
         @type  master: string
         @param master: name of the master
@@ -202,9 +164,6 @@ class InspectLocale(LoggingBuildStep):
 
         @type  tree: string
         @param tree: The tree identifier for this branch/product combo.
-
-        @type gather_stats: bool
-        @param gather_stats: whether or not to gather stats about untranslated strings.
         """
 
         LoggingBuildStep.__init__(self, **kwargs)
@@ -214,9 +173,7 @@ class InspectLocale(LoggingBuildStep):
                      'l10nbase'   : l10nbase,
                      'redirects'  : redirects,
                      'locale'     : locale,
-                     'tree'       : tree,
-                     'gather_stats'     : gather_stats,
-                     'initial_module'   : initial_module}
+                     'tree'       : tree}
         self.master = master
 
     def describe(self, done=False):

@@ -60,26 +60,22 @@ class SlaveMixin(SlaveCommandTestBase):
         #connection.creation.destroy_test_db(self.old_name)
         pass
 
-    def _check(self, res, expectedRC, expectedDetails, exSummary, exStats={}):
+    def _check(self, res, expectedRC, expectedDetails, exSummary):
         self.assertEqual(self.findRC(), expectedRC)
         res = self._getResults()
         details = res['details']
         summary = res['summary']
-        stats = res['stats']
         if expectedDetails is not None:
             self.assertEquals(details, dict())
         for k, v in exSummary.iteritems():
             self.assertEquals(summary[k], v)
-        self.assertEquals(stats, exStats)
         return
 
     def _getResults(self):
-        rv = {'stats':{}}
+        rv = {}
         for d in self.builder.updates:
             if 'result' in d:
                 rv.update(d['result'])
-            if 'stats' in d:
-                rv['stats'] = d['stats']
         return rv
 
 
@@ -160,28 +156,17 @@ dirs = embedding/android
 ''')
                   )
 
-    def args(self, app, locale, gather_stats=False, initial_module=None):
+    def args(self, app, locale):
         return {'workdir': '.',
                 'basedir': 'mozilla',
                 'inipath': 'mozilla/%s/locales/l10n.ini' % app,
                 'l10nbase': 'l10n',
                 'locale': locale,
                 'tree': app,
-                'gather_stats': gather_stats,
-                'initial_module': initial_module,
                 }
 
     def testGood(self):
         args = self.args('app', 'good')
-        d = self.startCommand(InspectCommand, args)
-        d.addCallback(self._check,
-                      0,
-                      dict(),
-                      dict(completion=100))
-        return d
-
-    def testGoodStats(self):
-        args = self.args('app', 'good', gather_stats=True)
         d = self.startCommand(InspectCommand, args)
         d.addCallback(self._check,
                       0,
