@@ -3,21 +3,22 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 from calendar import timegm
-import os
 
-from twisted.python import log, failure
-from twisted.internet import defer, reactor
+from twisted.python import log
+from twisted.internet import reactor
 from twisted.internet.task import LoopingCall
 
 from buildbot.changes import base, changes
 
+
 def createChangeSource(pollInterval=3*60):
     from life.models import Push, Branch, File
     from django.db import transaction
+
     class MBDBChangeSource(base.ChangeSource):
         debug = True
+
         def __init__(self,  pollInterval=30, branch='default'):
-            #base.ChangeSource.__init__(self)
             self.pollInterval = pollInterval
             self.latest = None
             self.branch, created = \
@@ -58,7 +59,7 @@ def createChangeSource(pollInterval=3*60):
                         self.latest = push.id
             except django.db.utils.OperationalError:
                 from django import db
-                django.db.connection.close()
+                db.connection.close()
                 log.msg('Django database OperationalError caught')
 
         def submitChangesForPush(self, push):
@@ -72,11 +73,11 @@ def createChangeSource(pollInterval=3*60):
                 branch = repo.name.encode('utf-8')
             files = [f.encode('utf-8') for f in
                      File.objects
-                        .filter(changeset__pushes=push)
-                        .distinct()
-                        .values_list('path', flat=True)]
-            when = timegm(push.push_date.utctimetuple()) +\
-                    push.push_date.microsecond/1000.0/1000
+                         .filter(changeset__pushes=push)
+                         .distinct()
+                         .values_list('path', flat=True)]
+            when = timegm(push.push_date.utctimetuple()) + \
+                push.push_date.microsecond/1000.0/1000
             c = changes.Change(who=push.user.encode('utf-8'),
                                files=files,
                                revision=push.tip.revision.encode('utf-8'),
@@ -88,7 +89,8 @@ def createChangeSource(pollInterval=3*60):
                 c.locale = locale
             self.parent.addChange(c)
 
-        def replay(self, builder, startPush=None, startTime=None, endTime=None):
+        def replay(self, builder,
+                   startPush=None, startTime=None, endTime=None):
             bm = self.parent.parent.botmaster
             qd = {}
             if startTime is not None:
@@ -101,6 +103,7 @@ def createChangeSource(pollInterval=3*60):
             i = q.iterator()
             if self.debug:
                 log.msg('replay called for %d pushes' % q.count())
+
             def next(_cb):
                 try:
                     p = i.next()
@@ -108,9 +111,11 @@ def createChangeSource(pollInterval=3*60):
                     log.msg("done iterating")
                     return
                 self.submitChangesForPush(p)
+
                 def stumble():
                     bm.waitUntilBuilderIdle(builder).addCallback(_cb, _cb)
                 reactor.callLater(.5, stumble)
+
             def cb(res, _cb):
                 reactor.callLater(.5, next, _cb)
             next(cb)

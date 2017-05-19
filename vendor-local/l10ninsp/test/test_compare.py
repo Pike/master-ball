@@ -5,32 +5,23 @@
 
 # test step.ShellCommand and the slave-side commands.ShellCommand
 
-import sys, time, os
+import os
 from twisted.trial import unittest
-from twisted.internet import reactor, defer
-from twisted.python import util, log
 from l10ninsp.slave import InspectCommand
-from buildbot import interfaces
-from buildbot.process.base import BuildRequest
-from buildbot.sourcestamp import SourceStamp
-from buildbot.process.properties import Properties
-from buildbot.test.runutils import SlaveCommandTestBase, RunMixin
-from shutil import copytree
-import pdb
+from buildbot.test.runutils import SlaveCommandTestBase
 
 from django.conf import settings
 
 if not settings.configured:
-    settings.configure(DATABASES = {'default':{'ENGINE':'django.db.backends.sqlite3'}},
-                       INSTALLED_APPS = ('life',
-                                         'mbdb',
-                                         'l10nstats',
-                                         'tinder',
-                                         ),
-                       BUILDMASTER_BASE = 'basedir')
+    settings.configure(
+        DATABASES={'default': {'ENGINE': 'django.db.backends.sqlite3'}},
+        INSTALLED_APPS=('life',
+                        'mbdb',
+                        'l10nstats',
+                        'tinder',
+                        ),
+        BUILDMASTER_BASE='basedir')
 
-from l10nstats.models import Run, Tree, Locale, ModuleCount
-from django.db import connection
 
 def createStage(basedir, *files):
     '''Create a staging environment in the given basedir
@@ -54,11 +45,6 @@ class SlaveMixin(SlaveCommandTestBase):
     def setUp(self):
         self.setUpBuilder(self.basedir)
         createStage(self.basedir, *self.stageFiles)
-        #self._db = connection.creation.create_test_db()
-
-    def tearDown(self):
-        #connection.creation.destroy_test_db(self.old_name)
-        pass
 
     def _check(self, res, expectedRC, expectedDetails, exSummary):
         self.assertEqual(self.findRC(), expectedRC)
@@ -80,31 +66,32 @@ class SlaveMixin(SlaveCommandTestBase):
 
 
 class SlaveSide(SlaveMixin, unittest.TestCase):
-    #old_name = settings.DATABASE_NAME
     basedir = "test_compare.testSuccess"
     stageFiles = ((('mozilla', 'app', 'locales', 'l10n.ini'),
-                     '''[general]
+                   '''[general]
 depth = ../..
 all = app/locales/all-locales
 
 [compare]
 dirs = app
 '''),
-    (('mozilla', 'app', 'locales', 'all-locales'),
-     '''good
+                  (('mozilla', 'app', 'locales', 'all-locales'),
+                   '''good
 obsolete
 missing
 '''),
-                  (('mozilla','app','locales','en-US','dir','file.dtd'),
-                   '<!ENTITY test "value">\n<!ENTITY test2 "value2">\n<!ENTITY test3 "value3">\n'),
-                  (('mozilla','embedding','android','locales','l10n.ini'),
+                  (('mozilla', 'app', 'locales', 'en-US', 'dir', 'file.dtd'),
+                   '<!ENTITY test "value">\n<!ENTITY test2 "value2">\n'
+                   '<!ENTITY test3 "value3">\n'),
+                  (('mozilla', 'android', 'base', 'locales', 'l10n.ini'),
                    """[general]
 depth = ../../..
 
 [compare]
-dirs = embedding/android
+dirs = android/base
 """),
-                  (('mozilla','embedding','android','locales','en-US','dir','file.dtd'),
+                  (('mozilla', 'android', 'base', 'locales', 'en-US', 'dir',
+                    'file.dtd'),
                    '''
 <!ENTITY test "value">
 <!ENTITY test2 "value2">
@@ -112,41 +99,41 @@ dirs = embedding/android
 <!ENTITY test4 "value4">
 <!ENTITY test5 "value5">
 '''),
-                  (('l10n','good','app','dir','file.dtd'),
+                  (('l10n', 'good', 'app', 'dir', 'file.dtd'),
                    '''
 <!ENTITY test "local value">
 <!ENTITY test2 "local value2">
 <!ENTITY test3 "local value3">
 '''),
-                  (('l10n','obsolete','app','dir','file.dtd'),
+                  (('l10n', 'obsolete', 'app', 'dir', 'file.dtd'),
                    '''
 <!ENTITY test "local value">
 <!ENTITY test2 "local value 2">
 <!ENTITY test3 "local value 3">
 <!ENTITY test4 "local value 4">
 '''),
-                  (('l10n','missing','app','dir','file.dtd'),
+                  (('l10n', 'missing', 'app', 'dir', 'file.dtd'),
                    '<!ENTITY test "local value">\n<!ENTITY test3 "value3">\n'),
-                  (('l10n','errors','app','dir','file.dtd'),
+                  (('l10n', 'errors', 'app', 'dir', 'file.dtd'),
                    '''
 <!ENTITY test "local " value">
 <!ENTITY test2 "local & value2">
 <!ENTITY test3 "local <foo> value3">
 '''),
-                  (('l10n','warnings','app','dir','file.dtd'),
+                  (('l10n', 'warnings', 'app', 'dir', 'file.dtd'),
                    u'''
 <!ENTITY test "local value">
 <!ENTITY test2 "local value2">
 <!ENTITY test3 "local &ƞǿŧ; value3">
 '''.encode('utf-8')),
-                  (('l10n','mixed','app','dir','file.dtd'),
+                  (('l10n', 'mixed', 'app', 'dir', 'file.dtd'),
                    '''
 <!ENTITY test "local " value">
 <!ENTITY test2 "local value2">
 <!ENTITY test3 "local &foo; value3">
 <!ENTITY test4 "obs1">
 '''),
-                  (('l10n','android','embedding','android','dir','file.dtd'),
+                  (('l10n', 'android', 'android', 'base', 'dir', 'file.dtd'),
                    '''
 <!ENTITY test "local value">
 <!ENTITY test2 "local\' value2">

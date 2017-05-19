@@ -13,15 +13,15 @@ from twisted.internet import defer, reactor
 from collections import defaultdict
 from datetime import datetime
 import os.path
-from ConfigParser import ConfigParser, NoSectionError, NoOptionError
+from ConfigParser import ConfigParser
 import urllib2
 from django.db import connection
-from life.models import Tree as ElmoTree, Locale, Repository, Forest, Push
-from l10nstats.models import Run
+from life.models import Tree as ElmoTree, Repository, Forest, Push
 
-import logger, util
+import logger
+import util
 
-#from bb2mbdb.utils import timeHelper
+
 def timeHelper(t):
     if t is None:
         return t
@@ -85,6 +85,7 @@ class AppScheduler(BaseUpstreamScheduler):
             self.dirs = defaultdict(list)
             self.topleveltrees = set()
             self.all_locales = defaultdict(set)
+
         def addDirs(self, tree, dirs):
             for d in dirs:
                 self.dirs[d].append(tree)
@@ -92,9 +93,10 @@ class AppScheduler(BaseUpstreamScheduler):
     class L10nDirs(defaultdict):
         def __init__(self):
             defaultdict.__init__(self, set)
+
         def addDirs(self, tree, dirs):
             for d in dirs:
-                self[d].add(tree) 
+                self[d].add(tree)
 
     def __init__(self, name, builderNames, inipath, treebuildername):
         """
@@ -126,7 +128,7 @@ class AppScheduler(BaseUpstreamScheduler):
         # deferred that's non-None if a tree builds are currently running
         self.waitOnTree = None
         self.pendingChanges = []
-        self.treesToDo = set() # trees that changed on a tree build
+        self.treesToDo = set()  # trees that changed on a tree build
         self.timeout = 5
         self.headers = {
             'User-Agent': 'Elmo/1.0 (l10n.mozilla.org)'
@@ -150,7 +152,8 @@ class AppScheduler(BaseUpstreamScheduler):
             # by checkEnUS, called after the buildset is done
             self.treesToDo.add(tree.name)
         # tree is new or changed, update django database
-        forest, isnew = Forest.objects.get_or_create(name=tree.branches['l10n'])
+        forest, isnew = \
+            Forest.objects.get_or_create(name=tree.branches['l10n'])
         if isnew:
             log.msg("WARNING: scheduler created forest %s, not expected" %
                     forest.name)
@@ -177,10 +180,13 @@ class AppScheduler(BaseUpstreamScheduler):
                     for ini in inis:
                         self.branches[_b].inis[ini].append(_n)
                 if _t.tld is not None:
-                    self.l10nbranches[_t.branches['l10n']].addDirs(_n, [_t.tld])
+                    (self.l10nbranches[_t.branches['l10n']]
+                         .addDirs(_n, [_t.tld]))
                     self.branches[_t.branches['en']].topleveltrees.add(_n)
                 if _t.all_locales is not None:
-                    self.branches[_t.branches['en']].all_locales[_t.all_locales].add(_n)
+                    (self.branches[_t.branches['en']]
+                         .all_locales[_t.all_locales]
+                         .add(_n))
         except Exception, e:
             log.msg(str(e))
         logger.debug("scheduler.l10n", "branch data cache updated")
@@ -223,7 +229,8 @@ class AppScheduler(BaseUpstreamScheduler):
         '''
         # res is either None or list of tuple build sets
         logger.debug('scheduler.l10n',
-                     'pending trees got built' + (change is not None and ", change given" or ""))
+                     'pending trees got built' +
+                     (change is not None and ", change given" or ""))
         # trees for the last change are built, wait no longer
         self.waitOnTree = None
         log.msg("self.branches: %s" % str(self.branches))
@@ -235,7 +242,7 @@ class AppScheduler(BaseUpstreamScheduler):
             self.addChange(c)
 
     def addChange(self, change):
-        '''Main entry point for the scheduler, this is called by the 
+        '''Main entry point for the scheduler, this is called by the
         buildmaster.
         '''
         log.msg("addChange appscheduler, %s" % str(self.waitOnTree))
@@ -266,7 +273,6 @@ class AppScheduler(BaseUpstreamScheduler):
                 # and check the change for en-US builds
                 _ds = []
                 for _n in tree_triggers:
-                    _t = self.trees[_n]
                     props = properties.Properties()
                     props.update({
                             'tree': _n,
@@ -281,13 +287,14 @@ class AppScheduler(BaseUpstreamScheduler):
                     _ds.append(bs.waitUntilFinished())
                 d = defer.DeferredList(_ds)
                 d.addCallback(self.onTreesBuilt,
-                              branchdata = branchdata, change = change)
+                              branchdata=branchdata, change=change)
                 self.waitOnTree = d
                 return
             self.checkEnUS(None, branchdata, change)
             return
         # check l10n changesets
-        log.msg('my branch: %s, in? %s' % (change.branch, ','.join(sorted(self.l10nbranches.keys()))))
+        log.msg('my branch: %s, in? %s' %
+                (change.branch, ','.join(sorted(self.l10nbranches.keys()))))
         if change.branch not in self.l10nbranches:
             return
         l10ndirs = self.l10nbranches[change.branch]
@@ -324,7 +331,7 @@ class AppScheduler(BaseUpstreamScheduler):
             if 'locales/en-US' in f:
                 mod = f.split('locales/en-US', 1)[0]
                 if mod:
-                    mod = mod.rstrip('/') # common case for non-single
+                    mod = mod.rstrip('/')  # common case for non-single
                 if not mod:
                     # single-module-hg, aka mobile
                     for _n in branchdata.topleveltrees:
@@ -350,11 +357,11 @@ class AppScheduler(BaseUpstreamScheduler):
             for l in _t.locales:
                 self.compareBuild(_n, l, [change])
 
-    def onAllLocales(self, page, tree, change = None):
+    def onAllLocales(self, page, tree, change=None):
         newlocs = util.parseLocales(page)
         added = set(newlocs) - set(self.trees[tree].locales)
         logger.debug('scheduler.l10n.all-locales',
-                     "had %s; got %s; new are %s" % 
+                     "had %s; got %s; new are %s" %
                      (', '.join(self.trees[tree].locales),
                       ', '.join(list(newlocs)),
                       ', '.join(list(added))))

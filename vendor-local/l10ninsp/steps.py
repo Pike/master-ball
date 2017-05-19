@@ -2,16 +2,13 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-import warnings
-
 from twisted.python import log
 from twisted.internet import reactor
-from buildbot.process.buildstep import BuildStep, LoggingBuildStep, LoggedRemoteCommand
-from buildbot.status.builder import SUCCESS, WARNINGS, FAILURE, SKIPPED, \
-    Results
+from buildbot.process.buildstep import (
+    BuildStep, LoggingBuildStep, LoggedRemoteCommand)
+from buildbot.status.builder import SUCCESS, FAILURE, SKIPPED
 from buildbot.process.properties import WithProperties
 
-from pprint import pformat
 import json
 from ConfigParser import ConfigParser, NoSectionError, NoOptionError
 from cStringIO import StringIO
@@ -19,10 +16,12 @@ import urllib2
 
 from bb2mbdb.utils import timeHelper
 
-import logger, util
+import logger
+import util
 import elasticsearch
 
 from django.conf import settings
+
 
 class ResultRemoteCommand(LoggedRemoteCommand):
     """
@@ -45,19 +44,18 @@ class ResultRemoteCommand(LoggedRemoteCommand):
         srctime = self.step.build.getProperty('srctime')
         log.msg('srctime is %s' % str(srctime))
         try:
-            build = Build.objects.get(builder__master__name = self.step.master,
-                                      builder__name = buildername,
-                                      buildnumber = buildnumber)
+            build = Build.objects.get(builder__master__name=self.step.master,
+                                      builder__name=buildername,
+                                      buildnumber=buildnumber)
         except Build.DoesNotExist:
             build = None
-        self.dbrun = Run.objects.create(locale = loc,
-                                        tree = tree,
-                                        build = build)
+        self.dbrun = Run.objects.create(locale=loc,
+                                        tree=tree,
+                                        build=build)
         self.dbrun.activate()
-        from life.models import Changeset, Push
+        from life.models import Changeset
         revs = self.step.build.getProperty('revisions')
         for rev in revs:
-            branch = self.step.build.getProperty('%s_branch' % rev)
             ident = self.step.build.getProperty('%s_revision' % rev)
             cs = None
             try:
@@ -91,19 +89,12 @@ class ResultRemoteCommand(LoggedRemoteCommand):
         if not result:
             return
 
-        rmsg = {}
         summary = result['summary']
         self.completion = summary['completion']
-        changed = summary['changed']
-        unchanged = summary['unchanged']
         tbmsg = ''
         if 'tree' in self.args:
             tbmsg = self.args['tree'] + ': '
             tbmsg += "%(tree)s %(locale)s" % self.args
-        if self.rc == FAILURE:
-            missing = sum([summary[k] \
-                           for k in ['missing', 'missingInFiles'] \
-                           if k in summary])
         self.logs['stdio'].addEntry(5, json.dumps(result, indent=2))
         self.addSummary(summary)
         es = elasticsearch.Elasticsearch(hosts=settings.ES_COMPARE_HOST)
@@ -131,6 +122,7 @@ class ResultRemoteCommand(LoggedRemoteCommand):
         LoggedRemoteCommand.remoteComplete(self, maybeFailure)
         return maybeFailure
 
+
 class InspectLocale(LoggingBuildStep):
     """
     This class hooks up CompareLocales in the build master.
@@ -143,7 +135,8 @@ class InspectLocale(LoggingBuildStep):
     description = ["comparing"]
     descriptionDone = ["compare", "locales"]
 
-    def __init__(self, master, workdir, inipath, l10nbase, redirects, locale, tree,
+    def __init__(self, master, workdir, inipath, l10nbase, redirects,
+                 locale, tree,
                  **kwargs):
         """
         @type  master: string
@@ -168,12 +161,12 @@ class InspectLocale(LoggingBuildStep):
 
         LoggingBuildStep.__init__(self, **kwargs)
 
-        self.args = {'workdir'    : workdir,
-                     'inipath'    : inipath,
-                     'l10nbase'   : l10nbase,
-                     'redirects'  : redirects,
-                     'locale'     : locale,
-                     'tree'       : tree}
+        self.args = {'workdir': workdir,
+                     'inipath': inipath,
+                     'l10nbase': l10nbase,
+                     'redirects': redirects,
+                     'locale': locale,
+                     'tree': tree}
         self.master = master
 
     def describe(self, done=False):
@@ -195,7 +188,7 @@ class InspectLocale(LoggingBuildStep):
         self.descriptionDone = [args['locale'], args['tree']]
         cmd = ResultRemoteCommand(self.cmd_name, args)
         self.startCommand(cmd, [])
-  
+
     def evaluateCommand(self, cmd):
         """Decide whether the command was SUCCESS, WARNINGS, or FAILURE.
         Override this to, say, declare WARNINGS if there is any stderr
@@ -208,11 +201,11 @@ class InspectLocale(LoggingBuildStep):
         log.msg("called getText")
         text = ["no completion found for result %s" % results]
         if hasattr(cmd, 'completion'):
-            log.msg("rate is %d, results is %s" % (cmd.completion,results))
+            log.msg("rate is %d, results is %s" % (cmd.completion, results))
             text = ['%d%% translated' % cmd.completion]
         if False and cmd.missing > 0:
             text += ['missing: %d' % cmd.missing]
-        return LoggingBuildStep.getText(self,cmd,results) + text
+        return LoggingBuildStep.getText(self, cmd, results) + text
 
 
 class GetRevisions(BuildStep):
@@ -240,9 +233,10 @@ class GetRevisions(BuildStep):
                 # l10n repo, append locale to branch
                 branch += '/' + self.build.getProperty('locale')
             try:
-                q = Push.objects.filter(repository__name=branch,
-                                        push_date__lte=when,
-                                        changesets__branch__name=self.hg_branch)
+                q = Push.objects.filter(
+                    repository__name=branch,
+                    push_date__lte=when,
+                    changesets__branch__name=self.hg_branch)
                 to_set = str(q.order_by('-pk')[0].tip.shortrev)
             except IndexError:
                 # no pushes, update to the requested hg branch
@@ -270,8 +264,8 @@ class TreeLoader(BuildStep):
         cb is a callback with signature (tree, changes=None)
         '''
         BuildStep.__init__(self, **kwargs)
-        self.addFactoryArguments(treename = treename,
-                                 l10nbuilds = l10nbuilds,
+        self.addFactoryArguments(treename=treename,
+                                 l10nbuilds=l10nbuilds,
                                  cb=cb)
         self.treename = treename
         self.l10nbuilds = l10nbuilds
@@ -322,7 +316,7 @@ class TreeLoader(BuildStep):
     def onL10niniLoad(self, inicontent, repo, branch, path, alllocales):
         self.pending -= 1
         logger.debug('scheduler.l10n.tree',
-                     'Loaded %s, alllocales: %s' % (path,alllocales))
+                     'Loaded %s, alllocales: %s' % (path, alllocales))
         self.step_status.setText(['loaded', 'l10n.ini'])
         loog = self.getLog('stdio')
         cp = ConfigParser()
@@ -344,10 +338,11 @@ class TreeLoader(BuildStep):
             tld = None
 
         if dirs:
-            loog.addStdout("adding %s on branch %s for %s\n" % 
+            loog.addStdout("adding %s on branch %s for %s\n" %
                            (", ".join(dirs), branch, self.rendered_tree))
         if tld is not None:
-            loog.addStdout("adding a tld compare for %s on %s\n" % (tld, branch))
+            loog.addStdout("adding a tld compare for %s on %s\n" %
+                           (tld, branch))
 
         self.tree.addData(branch, path, dirs, tld)
 
@@ -359,7 +354,8 @@ class TreeLoader(BuildStep):
                     if details['type'] != 'hg':
                         continue
                     loog.addStdout("need to load %s from %s on %s, %s\n" %
-                                   (title, details['l10n.ini'], details['repo'],
+                                   (title, details['l10n.ini'],
+                                    details['repo'],
                                     details['mozilla']))
                     # check if we got the en-US branch already, if not
                     # we're likely loading toolkit off a different repo
@@ -369,16 +365,17 @@ class TreeLoader(BuildStep):
                     self.loadIni(details['repo'], details['mozilla'],
                                  details['l10n.ini'])
                 except NoSectionError:
-                    loog.addStdout("need to load %s from %s\n" % (title, _path))
+                    loog.addStdout("need to load %s from %s\n" %
+                                   (title, _path))
                     self.loadIni(repo, branch, _path)
         except NoSectionError:
             pass
         try:
             if alllocales == 'yes':
-                allpath = cp.get('general','all')
+                allpath = cp.get('general', 'all')
                 self.tree.all_locales = allpath
                 logger.debug('scheduler.l10n.tree',
-                             'loading all-locales for %s from %s' % 
+                             'loading all-locales for %s from %s' %
                              (self.tree.name, allpath))
                 self.pending += 1
                 request = urllib2.Request(
@@ -394,7 +391,8 @@ class TreeLoader(BuildStep):
         loog = self.getLog('stdio')
         loog.addStderr(failure.getErrorMessage())
         if self.pending <= 0:
-            self.step_status.setText(['configure', self.rendered_tree,'failed'])
+            self.step_status.setText(
+                ['configure', self.rendered_tree, 'failed'])
             self.step_status.setText2([])
             self.finished(FAILURE)
         return failure
@@ -408,10 +406,11 @@ class TreeLoader(BuildStep):
                      'all-locales loaded, found %s' %
                      str(locales))
 
-    def allLocalesFailed(self, page):
+    def allLocalesFailed(self, failure):
         self.pending -= 1
         if self.pending <= 0:
-            self.step_status.setText(['configure', self.rendered_tree,'failed'])
+            self.step_status.setText(
+                ['configure', self.rendered_tree, 'failed'])
             self.step_status.setText2([])
             self.finished(FAILURE)
         return failure
@@ -424,7 +423,9 @@ class TreeLoader(BuildStep):
             self.step_status.setText2([])
             if self.cb is not None:
                 try:
-                    self.tree.locales = self.build.getProperties().getProperty('locales',[])[:]
+                    self.tree.locales = (self.build
+                                             .getProperties()
+                                             .getProperty('locales', [])[:])
                     self.cb(self.tree, changes=self.build.allChanges())
                 except Exception, e:
                     logger.debug('scheduler.l10n.tree', str(e))

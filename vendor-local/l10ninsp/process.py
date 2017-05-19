@@ -3,17 +3,17 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 from buildbot.process import factory
-from buildbot.steps.shell import ShellCommand, SetProperty
+from buildbot.steps.shell import ShellCommand
 from buildbot.process.properties import WithProperties
 
-from twisted.python import log, failure
+from twisted.python import log
 
 from l10ninsp.steps import InspectLocale
 
 
 class Factory(factory.BuildFactory):
     useProgress = False
-    
+
     def __init__(self, basedir, mastername, steps=None, hg_shares=None):
         factory.BuildFactory.__init__(self, steps)
         self.hg_shares = hg_shares
@@ -26,7 +26,7 @@ class Factory(factory.BuildFactory):
         b.useProgress = self.useProgress
         b.setStepFactories(steps)
         return b
-    
+
     def createSteps(self, request):
         revs = request.properties.getProperty('revisions')
         if revs is None:
@@ -58,9 +58,9 @@ class Factory(factory.BuildFactory):
                 })
                 for mod in revs)
         sourceSteps = tuple(
-            (ShellCommand, {'command': 
+            (ShellCommand, {'command':
                             hg + ['update', '-C', '-r',
-                             WithProperties('%%(%s_revision)s' % mod)],
+                                  WithProperties('%%(%s_revision)s' % mod)],
                             'workdir': WithProperties(hg_workdir +
                                                       '/%%(%s_branch)s' % mod),
                             'haltOnFailure': True})

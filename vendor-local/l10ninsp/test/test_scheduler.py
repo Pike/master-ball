@@ -2,36 +2,38 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-import pdb
-
 from buildbot.changes.changes import Change
 from buildbot.status import builder as builderstatus
 from twisted.trial import unittest
 from twisted.application import service
 from twisted.internet import reactor, defer
-from twisted.python import util, log
 from twisted.spread import pb
 
 from l10ninsp import scheduler
 import l10ninsp.logger
 l10ninsp.logger.init(
-    scheduler = l10ninsp.logger.DEBUG
+    scheduler=l10ninsp.logger.DEBUG
 )
+
 
 # copied from buildbot.test.test_scheduler
 class FakeMaster(service.MultiService):
     d = None
+
     def submitBuildSet(self, bs):
         self.sets.append(bs)
         if self.d:
             reactor.callLater(0, self.d.callback, bs)
             self.d = None
-        return pb.Referenceable() # makes the cleanup work correctly
+        return pb.Referenceable()  # makes the cleanup work correctly
+
+
 # copied from buildbot.test.test_buildreq
 class FakeBuilder:
     def __init__(self, name):
         self.name = name
         self.requests = []
+
     def submitBuildRequest(self, req):
         self.requests.append(req)
 
@@ -47,7 +49,8 @@ class AppScheduler(unittest.TestCase):
         return d
 
     def addScheduler(self, name, builderNames, inipath, treebuildername):
-        s = scheduler.AppScheduler(name, builderNames, inipath, treebuildername)
+        s = scheduler.AppScheduler(
+            name, builderNames, inipath, treebuildername)
         s.setServiceParent(self.master)
         self.scheduler = s
 
@@ -63,7 +66,7 @@ class AppScheduler(unittest.TestCase):
     def test_a_L10n(self):
         self.setupSimple()
         c = Change('author', ['test-app/file.dtd'], 'comment',
-                   branch='l10n-test', properties={'locale':'de'})
+                   branch='l10n-test', properties={'locale': 'de'})
         c.number = 1
         self.scheduler.addChange(c)
         self.failUnless(self.scheduler.dSubmitBuildsets)
@@ -89,15 +92,15 @@ class AppScheduler(unittest.TestCase):
         c.number = 1
         self.scheduler.addChange(c)
         c = Change('author', ['test-app/file.dtd'], 'comment',
-                   branch='l10n-test', properties={'locale':'de'})
+                   branch='l10n-test', properties={'locale': 'de'})
         c.number = 2
         self.scheduler.addChange(c)
         self.failUnless(self.scheduler.dSubmitBuildsets)
         self.scheduler.dSubmitBuildsets.cancel()
         pendings = self.scheduler.pendings
         self.failUnlessEqual(len(pendings), 2)
-        self.failUnlessEqual(len(pendings[('test','de')]), 2)
-        self.failUnlessEqual(len(pendings[('test','fr')]), 1)
+        self.failUnlessEqual(len(pendings[('test', 'de')]), 2)
+        self.failUnlessEqual(len(pendings[('test', 'fr')]), 1)
 
     def test_d_ini(self):
         self.setupSimple()
@@ -126,18 +129,8 @@ class AppScheduler(unittest.TestCase):
         self.scheduler.dSubmitBuildsets.cancel()
         pendings = self.scheduler.pendings
         self.failUnlessEqual(len(pendings), 2)
-        self.failUnlessEqual(len(pendings[('test','de')]), 1)
-        self.failUnlessEqual(len(pendings[('test','fr')]), 1)
-
-'''
-import os
-os.environ['DJANGO_SETTINGS_MODULE'] = 'l10n_site.settings'
-
-from django.test import TestCase as DjangoTest
-
-class BuildApp(unittest.TestCase, DjangoTest):
-    pass
-'''
+        self.failUnlessEqual(len(pendings[('test', 'de')]), 1)
+        self.failUnlessEqual(len(pendings[('test', 'fr')]), 1)
 
 
 class DirScheduler(unittest.TestCase):
@@ -165,7 +158,8 @@ dir/x-testing
         return d
 
     def setupSimple(self):
-        self.addScheduler('test-sched', 'dir-compare', 'dir', ['dir-compare'], 'http://127.0.0.1:%i/' % 8080)
+        self.addScheduler('test-sched', 'dir-compare', 'dir', ['dir-compare'],
+                          'http://127.0.0.1:%i/' % 8080)
 
     def testAB(self):
         self.setupSimple()
@@ -202,10 +196,12 @@ dir/x-testing
                           self.master.sets))
         self.assertEqual(locs, ['ab', 'fr', 'x-testing'])
 
+
 class PartialDirScheduler(DirScheduler):
 
     def addScheduler(self, name, tree, branch, builderNames, repourl):
-        s = scheduler.DirScheduler(name, tree, branch, builderNames, repourl, locales=['ab', 'fr'])
+        s = scheduler.DirScheduler(name, tree, branch, builderNames, repourl,
+                                   locales=['ab', 'fr'])
         s.setServiceParent(self.master)
         s.getPage = self.getPage
         self.scheduler = s
