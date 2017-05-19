@@ -9,118 +9,15 @@ from buildbot.process.buildstep import (
 from buildbot.status.builder import SUCCESS, FAILURE, SKIPPED
 from buildbot.process.properties import WithProperties
 
-import json
 from ConfigParser import ConfigParser, NoSectionError, NoOptionError
 from cStringIO import StringIO
 import urllib2
 
 from bb2mbdb.utils import timeHelper
+from mbdb.models import Build
 
 import logger
 import util
-import elasticsearch
-
-from django.conf import settings
-
-
-class ResultRemoteCommand(LoggedRemoteCommand):
-    """
-    Helper command class, extracts compare locale results from updates.
-    """
-
-    def __init__(self, name, args):
-        LoggedRemoteCommand.__init__(self, name, args)
-        self.dbrun = None
-
-    def ensureDBRun(self):
-        if self.dbrun is not None:
-            return
-        from l10nstats.models import Run, Build
-        from life.models import Tree, Locale
-        tree = Tree.objects.get(code=self.args['tree'])
-        loc = Locale.objects.get(code=self.args['locale'])
-        buildername = self.step.build.getProperty('buildername')
-        buildnumber = self.step.build.getProperty('buildnumber')
-        srctime = self.step.build.getProperty('srctime')
-        log.msg('srctime is %s' % str(srctime))
-        try:
-            build = Build.objects.get(builder__master__name=self.step.master,
-                                      builder__name=buildername,
-                                      buildnumber=buildnumber)
-        except Build.DoesNotExist:
-            build = None
-        self.dbrun = Run.objects.create(locale=loc,
-                                        tree=tree,
-                                        build=build)
-        self.dbrun.activate()
-        from life.models import Changeset
-        revs = self.step.build.getProperty('revisions')
-        for rev in revs:
-            ident = self.step.build.getProperty('%s_revision' % rev)
-            cs = None
-            try:
-                cs = Changeset.objects.get(revision__startswith=ident[:12])
-                self.dbrun.revisions.add(cs)
-            except (Changeset.DoesNotExist, Changeset.MultipleObjectsReturned):
-                log.msg("no changeset found for %s=%s" % (rev, ident))
-                pass
-        if srctime is not None:
-            self.dbrun.srctime = srctime
-            self.dbrun.save()
-
-    def remoteUpdate(self, update):
-        log.msg("remoteUpdate called with keys: " + ", ".join(update.keys()))
-        result = None
-        try:
-            self.rc = update.pop('rc')
-            log.msg('Comparison of localizations completed')
-        except KeyError:
-            pass
-        try:
-            # get the Observer data from the slave
-            result = update.pop('result')
-        except KeyError:
-            pass
-        if len(update):
-            # there's more than just us
-            LoggedRemoteCommand.remoteUpdate(self, update)
-            pass
-
-        if not result:
-            return
-
-        summary = result['summary']
-        self.completion = summary['completion']
-        tbmsg = ''
-        if 'tree' in self.args:
-            tbmsg = self.args['tree'] + ': '
-            tbmsg += "%(tree)s %(locale)s" % self.args
-        self.logs['stdio'].addEntry(5, json.dumps(result, indent=2))
-        self.addSummary(summary)
-        es = elasticsearch.Elasticsearch(hosts=settings.ES_COMPARE_HOST)
-        # create our ES document to index in ES
-        # details from result, and self.dbrun was created in addSummary above
-        body = {
-            'run': self.dbrun.id,
-            'details': result['details']
-        }
-        rv = es.index(index=settings.ES_COMPARE_INDEX, body=body,
-                      doc_type='comparison', id=self.dbrun.id)
-        log.msg('es.index: ' + json.dumps(rv))
-
-    def addSummary(self, summary):
-        self.ensureDBRun()
-        for k in ('missing', 'missingInFiles', 'obsolete', 'total',
-                  'changed', 'unchanged', 'keys', 'completion', 'errors',
-                  'report', 'warnings'):
-            setattr(self.dbrun, k, summary.get(k, 0))
-        self.dbrun.save()
-
-    def remoteComplete(self, maybeFailure):
-        log.msg('end with compare, rc: %s, maybeFailure: %s' %
-                (self.rc, maybeFailure))
-        LoggedRemoteCommand.remoteComplete(self, maybeFailure)
-        return maybeFailure
 
 
 class InspectLocale(LoggingBuildStep):
@@ -130,7 +27,6 @@ class InspectLocale(LoggingBuildStep):
 
     name = "moz_inspectlocales"
     cmd_name = name
-    warnOnFailure = 1
 
     description = ["comparing"]
     descriptionDone = ["compare", "locales"]
@@ -185,27 +81,24 @@ class InspectLocale(LoggingBuildStep):
             args['tree'] = self.build.getProperty('tree')
         except KeyError:
             pass
+        buildername = self.build.getProperty('buildername')
+        buildnumber = self.build.getProperty('buildnumber')
+        args['srctime'] = self.build.getProperty('srctime')
+        try:
+            build = Build.objects.get(builder__master__name=self.master,
+                                      builder__name=buildername,
+                                      buildnumber=buildnumber)
+            args['build'] = build.id
+        except Build.DoesNotExist:
+            args['build'] = None
+        args['revs'] = []
+        for rev in self.build.getProperty('revisions'):
+            ident = self.build.getProperty('%s_revision' % rev)
+            args['revs'].append(ident)
+
         self.descriptionDone = [args['locale'], args['tree']]
-        cmd = ResultRemoteCommand(self.cmd_name, args)
+        cmd = LoggedRemoteCommand(self.cmd_name, args)
         self.startCommand(cmd, [])
-
-    def evaluateCommand(self, cmd):
-        """Decide whether the command was SUCCESS, WARNINGS, or FAILURE.
-        Override this to, say, declare WARNINGS if there is any stderr
-        activity, or to say that rc!=0 is not actually an error."""
-
-        return cmd.rc
-
-    def getText(self, cmd, results):
-        assert cmd.rc == results, "This should really be our own result"
-        log.msg("called getText")
-        text = ["no completion found for result %s" % results]
-        if hasattr(cmd, 'completion'):
-            log.msg("rate is %d, results is %s" % (cmd.completion, results))
-            text = ['%d%% translated' % cmd.completion]
-        if False and cmd.missing > 0:
-            text += ['missing: %d' % cmd.missing]
-        return LoggingBuildStep.getText(self, cmd, results) + text
 
 
 class GetRevisions(BuildStep):
