@@ -3,6 +3,7 @@
 import os.path
 import site
 site.addsitedir(os.path.join(os.path.dirname(__file__), '..', 'vendor-local'))
+site.addsitedir(os.path.join(os.path.dirname(__file__), '..', 'shared'))
 
 from buildbot.scripts import runner
 runner.run()

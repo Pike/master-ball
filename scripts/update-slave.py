@@ -14,17 +14,29 @@ if __name__ == '__main__':
 
     tac = open(dest).read()
 
-    if 'addsitedir' in tac:
-        p.exit('Slave already processed')
-
-    tac = ("""import site
+    if 'addsitedir' not in tac:
+        tac = ("""import site
 site.addsitedir('%s')
 
 """ % os.path.abspath(
-    os.path.join(os.path.dirname(__file__), '..', 'vendor-local')
-    )
-    + tac.replace('import BuildSlave', """import BuildSlave
+            os.path.join(os.path.dirname(__file__), '..', 'vendor-local'))
+            + tac.replace('import BuildSlave', """import BuildSlave
 import l10ninsp.slave""")
-    )
+        )
 
-    open(dest, 'w').write(tac)
+        open(dest, 'w').write(tac)
+
+    if 'django' not in tac:
+        tac = tac.replace("""from twisted.application import service
+""", """
+import os
+site.addsitedir('%s')
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "buildbot_settings")
+import django
+django.setup()
+
+from twisted.application import service
+""" % os.path.abspath(
+            os.path.join(os.path.dirname(__file__), '..', 'vendor-local')))
+
+        open(dest, 'w').write(tac)

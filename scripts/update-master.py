@@ -26,7 +26,7 @@ site.addsitedir('%s')
         os.path.join(os.path.dirname(__file__), '..', 'vendor-local')
         ),
         os.path.abspath(
-        os.path.dirname(__file__)
+        os.path.join(os.path.dirname(__file__), '..', 'shared')
         ))
         + tac)
 
