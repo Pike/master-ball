@@ -16,6 +16,7 @@ import os
 from compare_locales.paths import EnumerateSourceTreeApp
 from compare_locales.compare import compareApp
 from django.conf import settings
+from django.db import connection
 import elasticsearch
 
 from l10nstats.models import Run, Build
@@ -43,6 +44,7 @@ class InspectCommand(Command):
             log.msg('Compare started')
 
         d = defer.Deferred()
+        connection.close_if_unusable_or_obsolete()
         d.addCallback(self.doCompare)
         reactor.callLater(0, d.callback, None)
         d.addBoth(self.finished)
