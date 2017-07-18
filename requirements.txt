@@ -5,4 +5,4 @@ http://twistedmatrix.com/Releases/Twisted/8.2/Twisted-8.2.0.tar.bz2
 simplejson
 MySQL-python
 elasticsearch==1.2
-compare-locales==1.2.3
+compare-locales==2.0

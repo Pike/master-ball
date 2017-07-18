@@ -14,7 +14,7 @@ import codecs
 import json
 import os
 from compare_locales.paths import EnumerateSourceTreeApp
-from compare_locales.compare import compareApp
+from compare_locales.compare import compareProjects
 from django.conf import settings
 from django.db import connection
 import elasticsearch
@@ -158,11 +158,13 @@ class InspectCommand(Command):
                                          os.path.join(workingdir, l10nbase),
                                          redirects,
                                          [locale])
-            o = compareApp(app)
+            observers = compareProjects(
+                [app.asConfig()],
+                file_stats=True)
         except Exception as e:
             log.msg(e)
             raise
-        return [o]
+        return observers
 
     def finished(self, *args):
         # sometimes self.rc isn't set here, no idea why
