@@ -1,4 +1,4 @@
-mercurial==4.0.1
+mercurial==4.2.2
 Django==1.8.17
 #Twisted==8.2.0
 http://twistedmatrix.com/Releases/Twisted/8.2/Twisted-8.2.0.tar.bz2
