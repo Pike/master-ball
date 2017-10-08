@@ -3,17 +3,15 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 from twisted.python import log
-from twisted.internet import reactor
 from buildbot.process.buildstep import (
     BuildStep, LoggingBuildStep, LoggedRemoteCommand)
-from buildbot.status.builder import SUCCESS, FAILURE, SKIPPED
+from buildbot.status.builder import SUCCESS, FAILURE
 from buildbot.process.properties import WithProperties
 
 from ConfigParser import ConfigParser, NoSectionError, NoOptionError
 from cStringIO import StringIO
 import urllib2
 
-from bb2mbdb.utils import timeHelper
 from mbdb.models import Build
 
 import logger
@@ -99,48 +97,6 @@ class InspectLocale(LoggingBuildStep):
         self.descriptionDone = [args['locale'], args['tree']]
         cmd = LoggedRemoteCommand(self.cmd_name, args)
         self.startCommand(cmd, [])
-
-
-class GetRevisions(BuildStep):
-    name = "moz_get_revs"
-    warnOnFailure = 1
-
-    description = ["get", "revisions"]
-    descriptionDone = ["got", "revisions"]
-    hg_branch = 'default'
-
-    def start(self):
-        log.msg("setting build props for revisions")
-        self.step_status.setText(self.description)
-        changes = self.build.allChanges()
-        if not changes:
-            return SKIPPED
-        from life.models import Push
-        when = timeHelper(max(map(lambda c: c.when, changes)))
-        loog = self.addLog("stdio")
-        loog.addStdout("Timestamps for %s:\n\n" % when)
-        revs = self.build.getProperty('revisions')[:]
-        for rev in revs:
-            branch = self.build.getProperty('%s_branch' % rev)
-            if rev == 'l10n':
-                # l10n repo, append locale to branch
-                branch += '/' + self.build.getProperty('locale')
-            try:
-                q = Push.objects.filter(
-                    repository__name=branch,
-                    push_date__lte=when,
-                    changesets__branch__name=self.hg_branch)
-                to_set = str(q.order_by('-pk')[0].tip.shortrev)
-            except IndexError:
-                # no pushes, update to the requested hg branch
-                to_set = self.hg_branch
-            self.build.setProperty('%s_revision' % rev, to_set, 'Build')
-            loog.addStdout("%s: %s\n" % (branch, to_set))
-        reactor.callLater(0, self.finished, SUCCESS)
-
-    def finished(self, results):
-        self.step_status.setText(self.descriptionDone)
-        BuildStep.finished(self, results)
 
 
 class TreeLoader(BuildStep):
