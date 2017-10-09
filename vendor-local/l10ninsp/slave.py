@@ -123,7 +123,7 @@ class InspectCommand(Command):
             log.msg(e)
             self.rc = EXCEPTION
             return
-        dbrun.revisions = revs
+        dbrun.revisions.set(revs)
         dbrun.save()
         dbrun.activate()
         try:
