@@ -1,5 +1,5 @@
-mercurial==4.2.2
-Django==1.11.6
+mercurial==4.4.1
+Django==1.11.7
 #Twisted==8.2.0
 https://github.com/twisted/twisted/archive/twisted-8.2.0.tar.gz
 simplejson
