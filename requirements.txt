@@ -5,4 +5,5 @@ https://github.com/twisted/twisted/archive/twisted-8.2.0.tar.gz
 simplejson
 MySQL-python
 elasticsearch==1.2
-compare-locales==2.0
+compare-locales==2.5.1
+fluent==0.4.4
