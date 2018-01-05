@@ -7,3 +7,4 @@ MySQL-python
 elasticsearch==1.2
 compare-locales==2.6
 fluent==0.4.4
+markus[datadog]==1.1

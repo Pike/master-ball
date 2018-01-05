@@ -19,6 +19,10 @@ DATABASES = {
 }
 SECRET_KEY = ''
 REPOSITORY_BASE = ''
+
+# If you want datadog reporting, uncomment this:
+# DATADOG_NAMESPACE = 'elmo'
+
 # If you want to use local hg shares, uncomment this:
 # HG_SHARES = ''
 
