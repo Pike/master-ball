@@ -8,6 +8,7 @@ from twisted.python import log
 from twisted.internet import reactor
 from twisted.internet.task import LoopingCall
 
+from buildbot.status.builder import EXCEPTION
 from buildbot.changes import base, changes
 
 
@@ -18,9 +19,9 @@ def createChangeSource(pollInterval=3*60):
     class MBDBChangeSource(base.ChangeSource):
         debug = True
 
-        def __init__(self,  pollInterval=30, branch='default'):
+        def __init__(self,  latest_push, pollInterval=30, branch='default'):
             self.pollInterval = pollInterval
-            self.latest = None
+            self.latest = latest_push
             self.branch, created = \
                 Branch.objects.get_or_create(name=branch)
 
@@ -39,12 +40,6 @@ def createChangeSource(pollInterval=3*60):
             import django.db.utils
             try:
                 with transaction.atomic():
-                    if self.latest is None:
-                        try:
-                            self.latest = Push.objects.order_by('-pk')[0].id
-                        except IndexError:
-                            self.latest = 0
-                        return
                     new_pushes = (
                         Push.objects
                         .filter(pk__gt=self.latest)
@@ -126,5 +121,97 @@ def createChangeSource(pollInterval=3*60):
         def __str__(self):
             return "MBDBChangeSource"
 
-    c = MBDBChangeSource(pollInterval)
+    latest_push = get_last_push_and_clean_up()
+    c = MBDBChangeSource(latest_push, pollInterval)
     return c
+
+
+def get_last_push_and_clean_up():
+    '''Find the starting point for the push changesource.
+
+    This sets the changesource such that missed pushes since the last shut
+    down get retriggered.
+    Also, if the master didn't shut down cleanly, re-schedule the affected
+    changes, and clean up the mbdb.
+    '''
+    from life.models import Changeset, Push
+    from mbdb.models import Build, BuildRequest, Change
+    from django.db.models import F, Max, Min, Q
+    # Check for debris of a bad shut-down
+    # Indications:
+    # - Pending builds (build requests w/out builds, but with changes)
+    # - Unfinished builds (no endtime)
+    #
+    # Find all revisions, find the latest push for each,
+    # find the earliest of those pushes.
+    revs = []
+    pending_requests = (
+        BuildRequest.objects
+        .filter(
+            builds__isnull=True,
+            sourcestamp__changes__isnull=False
+        )
+    )
+    pending_query = Q(stamps__requests__in=pending_requests)
+    unfinished_builds = (
+        Build.objects
+        .filter(endtime__isnull=True)
+    )
+    unfinished_query = Q(stamps__builds__in=unfinished_builds)
+    revs.extend(
+        Change.objects
+        .filter(
+            pending_query | unfinished_query
+        )
+        .values_list('revision', flat=True)
+        .distinct()
+    )
+    if revs:
+        # clean up
+        # remove pending build requests
+        pending_requests.delete()
+        # set end time on builds to last step endtime or starttime
+        # result of build and last step to EXCEPTION
+        for build in unfinished_builds:
+            (
+                build.steps
+                .filter(endtime__isnull=True)
+                .update(endtime=F('starttime'), result=EXCEPTION)
+            )
+            build.endtime = max(
+                list(build.steps.values_list('endtime', flat=True)) +
+                [build.starttime]
+            )
+            build.result = EXCEPTION
+            build.save()
+        # now that we cleaned up the debris, let's see where we want to start
+        changesets = (
+            Changeset.objects
+            .filter(revision__in=revs)
+            .annotate(last_push=Max('pushes'))
+        )
+        last_push = changesets.aggregate(Min('last_push'))['last_push__min']
+        if last_push is not None:
+            # let's redo starting from that push, so return that - 1
+            log.msg(
+                "replaying revisions: %s, %d changesets, first push: %d" %
+                (", ".join(revs), changesets.count(), last_push)
+            )
+            return last_push - 1
+
+    # OK, so either there wasn't any debris, or there was no push on it
+    # Find the last push with a run, in id ordering, not push_date ordering.
+    for p in Push.objects.order_by('-pk').prefetch_related('changesets')[:100]:
+        if p.tip.run_set.exists():
+            log.msg("restarting after a push with run: %d" % p.id)
+            return p.id
+
+    # We don't have recent builds, just use the last push
+    try:
+        p = Push.objects.order_by('-pk')[0]
+        log.msg("restarting after the last push: %d" % p.id)
+        return p.id
+    except IndexError:
+        # new data
+        log.msg("new data, starting poller with 0")
+        return 0
