@@ -163,6 +163,7 @@ def get_last_push_and_clean_up():
         .filter(
             pending_query | unfinished_query
         )
+        .filter(revision__isnull=False)
         .values_list('revision', flat=True)
         .distinct()
     )
