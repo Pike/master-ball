@@ -1,7 +1,9 @@
 mercurial==4.4.1
 Django==1.11.7
 #Twisted==8.2.0
-https://github.com/twisted/twisted/archive/twisted-8.2.0.tar.gz
+./zope.interface-4.4.3-cp27-cp27mu-manylinux1_x86_64.whl
+./Twisted-8.2.0-cp27-cp27mu-linux_x86_64.whl
+./buildbot-0.7.12-py2-none-any.whl
 simplejson
 MySQL-python
 elasticsearch==1.2
