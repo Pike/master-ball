@@ -8,5 +8,5 @@ simplejson
 MySQL-python
 elasticsearch==1.2
 compare-locales==2.7.0
-fluent==0.6.2
+fluent==0.6.4
 markus[datadog]==1.1
